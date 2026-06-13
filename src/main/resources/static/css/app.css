@@ -1,0 +1,22 @@
+:root {
+    --app-page-bg: #f8fafc;
+    --app-border-color: #e2e8f0;
+}
+
+body {
+    background-color: var(--app-page-bg);
+}
+
+.app-shell {
+    min-height: 100vh;
+}
+
+.app-card {
+    border: 1px solid var(--app-border-color);
+    border-radius: 0.75rem;
+    box-shadow: 0 0.5rem 1.5rem rgba(15, 23, 42, 0.04);
+}
+
+.table > :not(caption) > * > * {
+    vertical-align: middle;
+}

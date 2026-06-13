@@ -1,0 +1,31 @@
+# .cursorrules - MINIMAL STARTER VERSION
+tech_stack:
+  java: 17
+  spring_boot: 3.4.0
+  database: MySQL
+  build: Maven
+  Lombok:
+
+architecture:
+  pattern: Controller → Service → Repository
+  naming:
+    entities: PascalCase with 'Entity' suffix
+    dtos: PascalCase with 'DTO' suffix
+    repositories: PascalCase with 'Repository' suffix
+    services: PascalCase with 'Service' suffix
+
+database:
+  table_names: snake_case
+  localhost: 3306 
+  username: root
+  password: password
+  Spring Data JPA + Hibernate:
+  id_type: Long with auto-increment
+  timestamps: created_at, updated_at on every table
+
+frontend:
+  Spring MVC + Thymeleaf 
+  html/css/javascript
+  bootstrap:
+    version: 5.3.2
+   
