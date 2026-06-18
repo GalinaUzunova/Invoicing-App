@@ -1,22 +1,214 @@
+/* ─── Design tokens ─────────────────────────────────────────────── */
 :root {
-    --app-page-bg: #f8fafc;
-    --app-border-color: #e2e8f0;
+    --app-page-bg:        #f1f5f9;
+    --app-border-color:   #e2e8f0;
+    --app-shadow-sm:      0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+    --app-shadow-card:    0 4px 16px rgba(15, 23, 42, 0.06);
+    --app-radius:         0.75rem;
+    --app-primary:        #2563eb;
+    --app-primary-light:  #eff6ff;
 }
 
+/* ─── Base ───────────────────────────────────────────────────────── */
 body {
     background-color: var(--app-page-bg);
-}
-
-.app-shell {
     min-height: 100vh;
 }
 
-.app-card {
-    border: 1px solid var(--app-border-color);
-    border-radius: 0.75rem;
-    box-shadow: 0 0.5rem 1.5rem rgba(15, 23, 42, 0.04);
+/* ─── Navbar ─────────────────────────────────────────────────────── */
+.navbar-brand {
+    letter-spacing: -0.02em;
 }
 
+.navbar .nav-link {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #475569;
+    border-radius: 0.375rem;
+    padding: 0.375rem 0.625rem;
+    transition: color 0.15s, background-color 0.15s;
+}
+
+.navbar .nav-link:hover,
+.navbar .nav-link.active {
+    color: var(--app-primary);
+    background-color: var(--app-primary-light);
+}
+
+/* ─── Cards ──────────────────────────────────────────────────────── */
+.app-card {
+    border: 1px solid var(--app-border-color);
+    border-radius: var(--app-radius);
+    box-shadow: var(--app-shadow-card);
+}
+
+/* ─── Page header ────────────────────────────────────────────────── */
+.page-header {
+    padding-bottom: 1rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--app-border-color);
+}
+
+/* ─── Stat cards (dashboard) ─────────────────────────────────────── */
+.stat-card-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #64748b;
+    margin-bottom: 0.5rem;
+}
+
+.stat-card-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.1;
+    color: #0f172a;
+    margin-bottom: 0.75rem;
+}
+
+.stat-card-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+}
+
+/* ─── Status badges ──────────────────────────────────────────────── */
+.badge-draft { background-color: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+.badge-sent  { background-color: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+.badge-paid  { background-color: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+
+/* ─── Tables ─────────────────────────────────────────────────────── */
 .table > :not(caption) > * > * {
     vertical-align: middle;
+    padding: 0.875rem 0.75rem;
+}
+
+.table thead th {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    background-color: #f8fafc;
+    border-bottom-color: var(--app-border-color);
+}
+
+/* ─── Empty states ───────────────────────────────────────────────── */
+.empty-state {
+    padding: 4rem 2rem;
+    text-align: center;
+    color: #94a3b8;
+}
+
+.empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.4;
+}
+
+.empty-state-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 0.5rem;
+}
+
+.empty-state-text {
+    font-size: 0.875rem;
+    margin-bottom: 1.5rem;
+}
+
+/* ─── Auth pages ─────────────────────────────────────────────────── */
+.auth-shell {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #eff6ff 0%, #f1f5f9 60%, #f8fafc 100%);
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 440px;
+    padding: 2.5rem;
+}
+
+.auth-card-wide {
+    max-width: 560px;
+}
+
+.auth-logo {
+    font-size: 1.375rem;
+    font-weight: 700;
+    color: var(--app-primary);
+    letter-spacing: -0.02em;
+}
+
+/* ─── Invoice detail ─────────────────────────────────────────────── */
+.invoice-meta dt {
+    font-weight: 600;
+    color: #64748b;
+    font-size: 0.8125rem;
+}
+
+.invoice-meta dd {
+    margin-bottom: 0.5rem;
+    color: #0f172a;
+}
+
+/* ─── Form helpers ───────────────────────────────────────────────── */
+.form-label {
+    font-weight: 500;
+    font-size: 0.875rem;
+    color: #374151;
+    margin-bottom: 0.375rem;
+}
+
+.form-section-title {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #64748b;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--app-border-color);
+    margin-bottom: 1rem;
+}
+
+/* ─── Validation ─────────────────────────────────────────────────── */
+.field-error {
+    font-size: 0.8125rem;
+    color: #dc2626;
+    margin-top: 0.25rem;
+}
+
+/* ─── Totals summary strip ───────────────────────────────────────── */
+.totals-strip {
+    background-color: #f8fafc;
+    border: 1px solid var(--app-border-color);
+    border-radius: 0.5rem;
+    padding: 1rem 1.25rem;
+}
+
+.totals-strip .total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.25rem 0;
+    font-size: 0.9375rem;
+    color: #475569;
+}
+
+.totals-strip .total-row.grand {
+    border-top: 1px solid var(--app-border-color);
+    margin-top: 0.5rem;
+    padding-top: 0.75rem;
+    font-weight: 700;
+    font-size: 1.125rem;
+    color: #0f172a;
 }

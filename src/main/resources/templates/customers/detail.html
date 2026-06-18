@@ -1,66 +1,84 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title th:text="${customer.name} + ' | Invoicing Manager'">Customer | Invoicing Manager</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link th:href="@{/css/app.css}" rel="stylesheet">
-</head>
+<head th:replace="~{fragments/layout :: htmlHead(${customer.name})}"></head>
 <body>
-<nav class="navbar navbar-expand-lg bg-white border-bottom">
-    <div class="container">
-        <a class="navbar-brand fw-semibold" th:href="@{/customers}">Invoicing Manager</a>
-        <div class="navbar-nav ms-auto">
-            <a class="nav-link active" th:href="@{/customers}">Customers</a>
-            <a class="nav-link" th:href="@{/invoices}">Invoices</a>
-        </div>
-    </div>
-</nav>
+
+<nav th:replace="~{fragments/layout :: navbar('customers')}"></nav>
 
 <main class="container py-4">
-    <div class="d-flex justify-content-between align-items-start mb-3">
+
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb mb-0" style="font-size: 0.875rem">
+            <li class="breadcrumb-item"><a th:href="@{/customers}" class="text-decoration-none">Customers</a></li>
+            <li class="breadcrumb-item active" th:text="${customer.name}">Customer name</li>
+        </ol>
+    </nav>
+
+    <div class="page-header d-flex flex-wrap justify-content-between align-items-start gap-3">
         <div>
-            <h1 class="h3 mb-1" th:text="${customer.name}">Customer name</h1>
+            <h1 class="h3 fw-bold mb-1" th:text="${customer.name}">Customer name</h1>
             <p class="text-secondary mb-0">Customer details and invoice history.</p>
         </div>
         <div class="d-flex gap-2">
-            <a class="btn btn-outline-primary" th:href="@{/customers/{id}/edit(id=${customer.id})}">Edit</a>
-            <a class="btn btn-primary" th:href="@{/invoices/new(customerId=${customer.id})}">New invoice</a>
+            <a class="btn btn-outline-primary" th:href="@{/customers/{id}/edit(id=${customer.id})}">
+                <i class="bi bi-pencil me-1"></i>Edit
+            </a>
+            <a class="btn btn-primary" th:href="@{/invoices/new(customerId=${customer.id})}">
+                <i class="bi bi-plus-circle me-1"></i>New invoice
+            </a>
         </div>
     </div>
 
     <div class="row g-4">
         <div class="col-lg-4">
-            <div class="app-card bg-white p-4">
-                <h2 class="h5">Details</h2>
-                <dl class="mb-0">
-                    <dt>Email</dt>
-                    <dd th:text="${customer.email} ?: '-'">email@example.com</dd>
-                    <dt>Phone</dt>
-                    <dd th:text="${customer.phone} ?: '-'">Phone</dd>
-                    <dt>Address</dt>
-                    <dd th:text="${customer.billingAddress} ?: '-'">Address</dd>
-                    <dt>Tax number</dt>
-                    <dd th:text="${customer.taxNumber} ?: '-'">Tax number</dd>
+            <div class="app-card bg-white p-4 mb-3">
+                <h2 class="h6 fw-semibold text-uppercase text-secondary mb-3" style="letter-spacing: 0.05em; font-size: 0.75rem">Details</h2>
+                <dl class="row invoice-meta mb-0">
+                    <dt class="col-5">Email</dt>
+                    <dd class="col-7" th:text="${customer.email} ?: '-'">email@example.com</dd>
+                    <dt class="col-5">Phone</dt>
+                    <dd class="col-7" th:text="${customer.phone} ?: '-'">Phone</dd>
+                    <dt class="col-5">Address</dt>
+                    <dd class="col-7" th:text="${customer.billingAddress} ?: '-'">Address</dd>
+                    <dt class="col-5">City</dt>
+                    <dd class="col-7" th:text="${customer.city} ?: '-'">City</dd>
+                    <dt class="col-5">Country</dt>
+                    <dd class="col-7" th:text="${customer.country} ?: '-'">Country</dd>
+                    <dt class="col-5">Tax number</dt>
+                    <dd class="col-7 mb-0" th:text="${customer.taxNumber} ?: '-'">Tax number</dd>
                 </dl>
+            </div>
 
-                <form class="mt-3" th:action="@{/customers/{id}/delete(id=${customer.id})}" method="post"
-                      onsubmit="return confirm('Delete this customer?');">
+            <div class="app-card bg-white p-4 border-danger-subtle">
+                <p class="form-section-title text-danger-emphasis" style="border-color: #fecaca">Danger zone</p>
+                <p class="text-secondary mb-3" style="font-size: 0.875rem">Permanently delete this customer and all associated data.</p>
+                <form th:action="@{/customers/{id}/delete(id=${customer.id})}" method="post"
+                      onsubmit="return confirm('Delete this customer? This cannot be undone.');">
                     <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
-                    <button class="btn btn-outline-danger btn-sm" type="submit">Delete customer</button>
+                    <button class="btn btn-outline-danger btn-sm" type="submit">
+                        <i class="bi bi-trash me-1"></i>Delete customer
+                    </button>
                 </form>
             </div>
         </div>
 
         <div class="col-lg-8">
             <div class="app-card bg-white p-4">
-                <h2 class="h5">Invoices</h2>
-                <div th:if="${#lists.isEmpty(invoices)}" class="text-secondary">
-                    No invoices for this customer yet.
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h5 fw-semibold mb-0">Invoices</h2>
+                    <a class="btn btn-sm btn-primary" th:href="@{/invoices/new(customerId=${customer.id})}">
+                        <i class="bi bi-plus-circle me-1"></i>New invoice
+                    </a>
                 </div>
+
+                <div th:if="${#lists.isEmpty(invoices)}" class="empty-state" style="padding: 2.5rem 1rem">
+                    <div class="empty-state-icon"><i class="bi bi-file-earmark-text"></i></div>
+                    <p class="empty-state-title">No invoices for this customer yet</p>
+                    <p class="empty-state-text mb-0">Create one to get started.</p>
+                </div>
+
                 <div class="table-responsive" th:unless="${#lists.isEmpty(invoices)}">
-                    <table class="table">
+                    <table class="table table-hover mb-0">
                         <thead>
                         <tr>
                             <th>Number</th>
@@ -71,10 +89,19 @@
                         </thead>
                         <tbody>
                         <tr th:each="invoice : ${invoices}">
-                            <td><a th:href="@{/invoices/{id}(id=${invoice.id})}" th:text="${invoice.invoiceNumber}">INV-001</a></td>
-                            <td><span class="badge text-bg-secondary" th:text="${invoice.status}">DRAFT</span></td>
-                            <td th:text="${invoice.issueDate}">2026-01-01</td>
-                            <td class="text-end" th:text="${invoice.grandTotal}">0.00</td>
+                            <td>
+                                <a class="fw-medium text-decoration-none"
+                                   th:href="@{/invoices/{id}(id=${invoice.id})}"
+                                   th:text="${invoice.invoiceNumber}">INV-001</a>
+                            </td>
+                            <td>
+                                <span class="badge"
+                                      th:classappend="${invoice.status.name() == 'PAID'} ? 'badge-paid' :
+                                                     (${invoice.status.name() == 'SENT'} ? 'badge-sent' : 'badge-draft')"
+                                      th:text="${invoice.status}">DRAFT</span>
+                            </td>
+                            <td class="text-secondary" th:text="${invoice.issueDate}">2026-01-01</td>
+                            <td class="text-end fw-medium" th:text="${invoice.grandTotal}">0.00</td>
                         </tr>
                         </tbody>
                     </table>
@@ -82,6 +109,9 @@
             </div>
         </div>
     </div>
+
 </main>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
 </body>
 </html>
