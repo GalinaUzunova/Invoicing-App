@@ -1,3 +1,8 @@
+C:\Users\gbuzu\Desktop\Invoicing manager\src\main\java\com\invoicingmanager\company\CompanyDetailsController.java
+C:\Users\gbuzu\Desktop\Invoicing manager\src\main\java\com\invoicingmanager\company\CompanyDetailsDTO.java
+C:\Users\gbuzu\Desktop\Invoicing manager\src\main\java\com\invoicingmanager\company\CompanyDetailsEntity.java
+C:\Users\gbuzu\Desktop\Invoicing manager\src\main\java\com\invoicingmanager\company\CompanyDetailsRepository.java
+C:\Users\gbuzu\Desktop\Invoicing manager\src\main\java\com\invoicingmanager\company\CompanyDetailsService.java
 C:\Users\gbuzu\Desktop\Invoicing manager\src\main\java\com\invoicingmanager\customer\CustomerController.java
 C:\Users\gbuzu\Desktop\Invoicing manager\src\main\java\com\invoicingmanager\customer\CustomerDTO.java
 C:\Users\gbuzu\Desktop\Invoicing manager\src\main\java\com\invoicingmanager\customer\CustomerEntity.java
@@ -6,6 +11,16 @@ C:\Users\gbuzu\Desktop\Invoicing manager\src\main\java\com\invoicingmanager\cust
 C:\Users\gbuzu\Desktop\Invoicing manager\src\main\java\com\invoicingmanager\dashboard\DashboardController.java
 C:\Users\gbuzu\Desktop\Invoicing manager\src\main\java\com\invoicingmanager\dashboard\DashboardService.java
 C:\Users\gbuzu\Desktop\Invoicing manager\src\main\java\com\invoicingmanager\dashboard\DashboardSummaryDTO.java
+C:\Users\gbuzu\Desktop\Invoicing manager\src\main\java\com\invoicingmanager\estimate\EstimateCalculator.java
+C:\Users\gbuzu\Desktop\Invoicing manager\src\main\java\com\invoicingmanager\estimate\EstimateController.java
+C:\Users\gbuzu\Desktop\Invoicing manager\src\main\java\com\invoicingmanager\estimate\EstimateDTO.java
+C:\Users\gbuzu\Desktop\Invoicing manager\src\main\java\com\invoicingmanager\estimate\EstimateEntity.java
+C:\Users\gbuzu\Desktop\Invoicing manager\src\main\java\com\invoicingmanager\estimate\EstimateLineItemDTO.java
+C:\Users\gbuzu\Desktop\Invoicing manager\src\main\java\com\invoicingmanager\estimate\EstimateLineItemEntity.java
+C:\Users\gbuzu\Desktop\Invoicing manager\src\main\java\com\invoicingmanager\estimate\EstimateLineItemRepository.java
+C:\Users\gbuzu\Desktop\Invoicing manager\src\main\java\com\invoicingmanager\estimate\EstimateRepository.java
+C:\Users\gbuzu\Desktop\Invoicing manager\src\main\java\com\invoicingmanager\estimate\EstimateService.java
+C:\Users\gbuzu\Desktop\Invoicing manager\src\main\java\com\invoicingmanager\estimate\EstimateStatus.java
 C:\Users\gbuzu\Desktop\Invoicing manager\src\main\java\com\invoicingmanager\HomeController.java
 C:\Users\gbuzu\Desktop\Invoicing manager\src\main\java\com\invoicingmanager\invoice\InvoiceCalculator.java
 C:\Users\gbuzu\Desktop\Invoicing manager\src\main\java\com\invoicingmanager\invoice\InvoiceController.java

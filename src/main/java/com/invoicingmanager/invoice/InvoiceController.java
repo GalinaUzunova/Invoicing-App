@@ -1,5 +1,6 @@
 package com.invoicingmanager.invoice;
 
+import com.invoicingmanager.company.CompanyDetailsService;
 import com.invoicingmanager.customer.CustomerService;
 import com.invoicingmanager.user.UserEntity;
 import com.invoicingmanager.user.UserService;
@@ -21,11 +22,18 @@ public class InvoiceController {
 
     private final InvoiceService invoiceService;
     private final CustomerService customerService;
+    private final CompanyDetailsService companyDetailsService;
     private final UserService userService;
 
-    public InvoiceController(InvoiceService invoiceService, CustomerService customerService, UserService userService) {
+    public InvoiceController(
+            InvoiceService invoiceService,
+            CustomerService customerService,
+            CompanyDetailsService companyDetailsService,
+            UserService userService
+    ) {
         this.invoiceService = invoiceService;
         this.customerService = customerService;
+        this.companyDetailsService = companyDetailsService;
         this.userService = userService;
     }
 
@@ -77,6 +85,7 @@ public class InvoiceController {
         InvoiceEntity invoice = invoiceService.findByIdForUser(id, user);
         model.addAttribute("pageTitle", invoice.getInvoiceNumber());
         model.addAttribute("invoice", invoice);
+        model.addAttribute("company", companyDetailsService.getForUser(user));
         return "invoices/detail";
     }
 

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: htmlHead(${estimate.quotationNumber})}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: navbar('estimates')}"></nav>
+
+<main class="container py-4">
+
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb mb-0" style="font-size: 0.875rem">
+            <li class="breadcrumb-item"><a th:href="@{/estimates}" class="text-decoration-none">Estimates</a></li>
+            <li class="breadcrumb-item active" th:text="${estimate.quotationNumber}">QUO-001</li>
+        </ol>
+    </nav>
+
+    <div class="page-header d-flex flex-wrap justify-content-between align-items-start gap-3">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <h1 class="h3 fw-bold mb-0" th:text="${estimate.quotationNumber}">QUO-001</h1>
+                <span class="badge"
+                      th:classappend="${estimate.status.name() == 'ACCEPTED'} ? 'badge-accepted' :
+                                     (${estimate.status.name() == 'DECLINED'} ? 'badge-declined' :
+                                     (${estimate.status.name() == 'SENT'} ? 'badge-sent' : 'badge-draft'))"
+                      th:text="${estimate.status}">DRAFT</span>
+            </div>
+            <p class="text-secondary mb-0">
+                <a class="text-secondary text-decoration-none"
+                   th:href="@{/customers/{id}(id=${estimate.customer.id})}"
+                   th:text="${estimate.customer.name}">Customer</a>
+            </p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-outline-secondary" th:href="@{/estimates/{id}/edit(id=${estimate.id})}">
+                <i class="bi bi-pencil me-1"></i>Edit
+            </a>
+            <form th:if="${estimate.status.name() == 'DRAFT'}" th:action="@{/estimates/{id}/send(id=${estimate.id})}" method="post" class="m-0">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                <button class="btn btn-primary" type="submit">
+                    <i class="bi bi-send me-1"></i>Mark sent
+                </button>
+            </form>
+            <form th:if="${estimate.status.name() != 'ACCEPTED' and estimate.status.name() != 'DECLINED'}"
+                  th:action="@{/estimates/{id}/accepted(id=${estimate.id})}" method="post" class="m-0">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                <button class="btn btn-outline-success" type="submit">
+                    <i class="bi bi-check-circle me-1"></i>Mark accepted
+                </button>
+            </form>
+            <form th:if="${estimate.status.name() != 'ACCEPTED' and estimate.status.name() != 'DECLINED'}"
+                  th:action="@{/estimates/{id}/declined(id=${estimate.id})}" method="post" class="m-0">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                <button class="btn btn-outline-danger" type="submit">
+                    <i class="bi bi-x-circle me-1"></i>Mark declined
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="app-card bg-white p-4">
+
+        <div th:replace="~{fragments/company-header :: companyHeader(${company})}"></div>
+
+        <div class="row mb-4 align-items-start">
+            <div class="col-md-6">
+                <h2 class="h6 fw-semibold text-uppercase text-secondary mb-3" style="letter-spacing: 0.05em; font-size: 0.75rem">Bill to</h2>
+                <p class="mb-1 fw-semibold fs-6" th:text="${estimate.customer.name}">Customer</p>
+                <p class="mb-1 text-secondary" th:text="${estimate.customer.email} ?: ''">email@example.com</p>
+                <p class="mb-2 text-secondary" th:text="${estimate.customer.billingAddress} ?: ''">Address</p>
+                <p class="mb-0 text-secondary" style="font-size: 0.8125rem">
+                    Quotation <span class="fw-bold text-body" th:text="${estimate.quotationNumber}">QUO-001</span>
+                </p>
+            </div>
+            <div class="col-md-6 mt-3 mt-md-0">
+                <h2 class="h6 fw-semibold text-uppercase text-secondary mb-3" style="letter-spacing: 0.05em; font-size: 0.75rem">Dates</h2>
+                <dl class="row invoice-meta mb-0">
+                    <dt class="col-5">Issue date</dt>
+                    <dd class="col-7" th:text="${estimate.issueDate}">2026-01-01</dd>
+                    <dt class="col-5">Expiry date</dt>
+                    <dd class="col-7 mb-0" th:text="${estimate.expiryDate} ?: '-'">2026-01-15</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="table-responsive mb-4">
+            <table class="table table-hover mb-0">
+                <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Description</th>
+                    <th class="text-end">Qty</th>
+                    <th class="text-end">Unit price</th>
+                    <th class="text-end">Tax %</th>
+                    <th class="text-end">Total</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="lineItem : ${estimate.lineItems}">
+                    <td class="fw-medium" th:text="${lineItem.itemName}">Item</td>
+                    <td class="text-secondary" th:text="${lineItem.description} ?: '-'">Description</td>
+                    <td class="text-end" th:text="${lineItem.quantity}">1.00</td>
+                    <td class="text-end" th:text="${lineItem.unitPrice}">0.00</td>
+                    <td class="text-end" th:text="${lineItem.taxRate}">0.00</td>
+                    <td class="text-end fw-medium" th:text="${lineItem.lineTotal}">0.00</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="row justify-content-end mb-4">
+            <div class="col-md-5 col-lg-4">
+                <div class="totals-strip">
+                    <div class="total-row">
+                        <span>Subtotal</span>
+                        <span th:text="${estimate.subtotal}">0.00</span>
+                    </div>
+                    <div class="total-row">
+                        <span>Tax</span>
+                        <span th:text="${estimate.taxTotal}">0.00</span>
+                    </div>
+                    <div class="total-row grand">
+                        <span>Total</span>
+                        <span th:text="${estimate.grandTotal}">0.00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div th:if="${estimate.notes}" class="alert alert-light border d-flex gap-2 mb-4">
+            <i class="bi bi-chat-left-text text-secondary flex-shrink-0 mt-1"></i>
+            <div>
+                <p class="fw-semibold mb-1" style="font-size: 0.875rem">Notes</p>
+                <p class="mb-0 text-secondary" th:text="${estimate.notes}">Notes</p>
+            </div>
+        </div>
+
+        <div class="border-top pt-3 mt-2">
+            <p class="form-section-title text-danger-emphasis" style="border-color: #fecaca">Danger zone</p>
+            <p class="text-secondary mb-3" style="font-size: 0.875rem">Permanently delete this estimate. This cannot be undone.</p>
+            <form th:action="@{/estimates/{id}/delete(id=${estimate.id})}" method="post"
+                  onsubmit="return confirm('Delete this estimate? This cannot be undone.');">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                <button class="btn btn-outline-danger btn-sm" type="submit">
+                    <i class="bi bi-trash me-1"></i>Delete estimate
+                </button>
+            </form>
+        </div>
+
+    </div>
+
+</main>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>
