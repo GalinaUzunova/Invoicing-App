@@ -50,28 +50,16 @@
 
     <div class="app-card bg-white p-4">
 
-        <div th:replace="~{fragments/company-header :: companyHeader(${company})}"></div>
-
-        <div class="row mb-4 align-items-start">
-            <div class="col-md-6">
-                <h2 class="h6 fw-semibold text-uppercase text-secondary mb-3" style="letter-spacing: 0.05em; font-size: 0.75rem">Bill to</h2>
-                <p class="mb-1 fw-semibold fs-6" th:text="${invoice.customer.name}">Customer</p>
-                <p class="mb-1 text-secondary" th:text="${invoice.customer.email} ?: ''">email@example.com</p>
-                <p class="mb-2 text-secondary" th:text="${invoice.customer.billingAddress} ?: ''">Address</p>
-                <p class="mb-0 text-secondary" style="font-size: 0.8125rem">
-                    Invoice <span class="fw-bold text-body" th:text="${invoice.invoiceNumber}">INV-001</span>
-                </p>
-            </div>
-            <div class="col-md-6 mt-3 mt-md-0">
-                <h2 class="h6 fw-semibold text-uppercase text-secondary mb-3" style="letter-spacing: 0.05em; font-size: 0.75rem">Dates</h2>
-                <dl class="row invoice-meta mb-0">
-                    <dt class="col-5">Issue date</dt>
-                    <dd class="col-7" th:text="${invoice.issueDate}">2026-01-01</dd>
-                    <dt class="col-5">Due date</dt>
-                    <dd class="col-7 mb-0" th:text="${invoice.dueDate} ?: '-'">2026-01-15</dd>
-                </dl>
-            </div>
-        </div>
+        <div th:replace="~{fragments/company-header :: documentHeader(
+                ${company},
+                ${invoice.customer},
+                'Invoice',
+                ${invoice.invoiceNumber},
+                'Issue date',
+                ${invoice.issueDate},
+                'Due date',
+                ${invoice.dueDate}
+        )}"></div>
 
         <div class="table-responsive mb-4">
             <table class="table table-hover mb-0">

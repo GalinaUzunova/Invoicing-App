@@ -1,41 +1,61 @@
-<div th:fragment="companyHeader(company)" class="row mb-4 pb-4 border-bottom align-items-start">
-    <div class="col-md-6">
-        <h2 class="h6 fw-semibold text-uppercase text-secondary mb-3" style="letter-spacing: 0.05em; font-size: 0.75rem">From</h2>
+<div th:fragment="documentHeader(company, customer, documentLabel, documentNumber, issueDateLabel, issueDate, secondaryDateLabel, secondaryDate)"
+     class="document-header mb-4 pb-3 border-bottom">
+    <div class="row g-3 align-items-start">
+        <div class="col-lg-5">
+            <div class="d-flex align-items-start gap-3">
+                <img th:if="${company.hasLogo()}"
+                     th:src="@{/company/logo}"
+                     class="company-logo-display"
+                     alt="Company logo">
 
-        <div th:if="${company.hasAnyDetails()}">
-            <p th:if="${company.companyName != null and !company.companyName.isEmpty()}"
-               class="mb-1 fw-bold fs-6" th:text="${company.companyName}">Company name</p>
-            <p th:if="${company.address != null and !company.address.isEmpty()}"
-               class="mb-1 text-secondary" th:text="${company.address}">Address</p>
-            <p th:if="${company.vatNumber != null and !company.vatNumber.isEmpty()}"
-               class="mb-0 text-secondary" style="font-size: 0.875rem">
-                VAT reg. <span class="fw-semibold text-body" th:text="${company.vatNumber}">VAT123</span>
-            </p>
+                <div class="flex-grow-1 min-width-0">
+                    <p class="document-eyebrow">From</p>
+                    <div th:if="${company.hasAnyDetails()}">
+                        <p th:if="${company.companyName != null and !company.companyName.isEmpty()}"
+                           class="document-party-name" th:text="${company.companyName}">Company name</p>
+                        <p th:if="${company.address != null and !company.address.isEmpty()}"
+                           class="document-muted mb-1" th:text="${company.address}">Address</p>
+                        <p th:if="${company.phone != null and !company.phone.isEmpty()}" class="document-muted mb-1">
+                            <i class="bi bi-telephone me-1"></i><span th:text="${company.phone}">Phone</span>
+                        </p>
+                        <p th:if="${company.email != null and !company.email.isEmpty()}" class="document-muted mb-1">
+                            <i class="bi bi-envelope me-1"></i><span th:text="${company.email}">email@company.com</span>
+                        </p>
+                        <p th:if="${company.vatNumber != null and !company.vatNumber.isEmpty()}"
+                           class="document-muted mb-0">
+                            VAT reg. <span class="fw-semibold text-body" th:text="${company.vatNumber}">VAT123</span>
+                        </p>
+                    </div>
+
+                    <p th:unless="${company.hasAnyDetails()}" class="document-muted mb-0">
+                        No company details yet.
+                        <a th:href="@{/company}" class="fw-medium">Add company details</a>
+                    </p>
+                </div>
+            </div>
         </div>
 
-        <p th:unless="${company.hasAnyDetails()}" class="text-secondary mb-0" style="font-size: 0.875rem">
-            No company details yet.
-            <a th:href="@{/company}" class="fw-medium">Add company details</a>
-        </p>
-    </div>
+        <div class="col-lg-4">
+            <p class="document-eyebrow">Bill to</p>
+            <p class="document-party-name" th:text="${customer.name}">Customer</p>
+            <p class="document-muted mb-1" th:text="${customer.email} ?: ''">email@example.com</p>
+            <p class="document-muted mb-0" th:text="${customer.billingAddress} ?: ''">Address</p>
+        </div>
 
-    <div class="col-md-6 mt-3 mt-md-0">
-        <div class="d-flex flex-column align-items-md-end gap-2">
-            <img th:if="${company.hasLogo()}"
-                 th:src="@{/company/logo}"
-                 class="company-logo-display"
-                 alt="Company logo">
-            <div class="text-md-end" th:if="${(company.phone != null and !company.phone.isEmpty()) or (company.email != null and !company.email.isEmpty())}">
-                <p th:if="${company.phone != null and !company.phone.isEmpty()}"
-                   class="mb-1 text-secondary mb-md-1" style="font-size: 0.875rem">
-                    <i class="bi bi-telephone me-1"></i>
-                    <span th:text="${company.phone}">Phone</span>
-                </p>
-                <p th:if="${company.email != null and !company.email.isEmpty()}"
-                   class="mb-0 text-secondary" style="font-size: 0.875rem">
-                    <i class="bi bi-envelope me-1"></i>
-                    <span th:text="${company.email}">email@company.com</span>
-                </p>
+        <div class="col-lg-3">
+            <div class="document-meta">
+                <div class="document-meta-row">
+                    <span th:text="${documentLabel}">Invoice</span>
+                    <strong th:text="${documentNumber}">INV-001</strong>
+                </div>
+                <div class="document-meta-row">
+                    <span th:text="${issueDateLabel}">Issue date</span>
+                    <strong th:text="${issueDate}">2026-01-01</strong>
+                </div>
+                <div class="document-meta-row">
+                    <span th:text="${secondaryDateLabel}">Due date</span>
+                    <strong th:text="${secondaryDate} ?: '-'">2026-01-15</strong>
+                </div>
             </div>
         </div>
     </div>
