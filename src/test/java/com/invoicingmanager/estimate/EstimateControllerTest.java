@@ -7,6 +7,8 @@ import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
@@ -17,15 +19,18 @@ import com.invoicingmanager.company.CompanyDetailsEntity;
 import com.invoicingmanager.company.CompanyDetailsService;
 import com.invoicingmanager.customer.CustomerEntity;
 import com.invoicingmanager.customer.CustomerService;
+import com.invoicingmanager.pdf.DocumentPdfService;
 import com.invoicingmanager.security.SecurityConfig;
 import com.invoicingmanager.user.UserEntity;
 import com.invoicingmanager.user.UserService;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -45,6 +50,9 @@ class EstimateControllerTest {
 
     @MockitoBean
     private CompanyDetailsService companyDetailsService;
+
+    @MockitoBean
+    private DocumentPdfService documentPdfService;
 
     @MockitoBean
     private UserService userService;
@@ -103,6 +111,34 @@ class EstimateControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("estimates/detail"))
                 .andExpect(model().attributeExists("estimate", "company"));
+    }
+
+    @Test
+    @WithMockUser(username = "owner@example.com")
+    void downloadPdfReturnsEstimatePdf() throws Exception {
+        UserEntity user = new UserEntity();
+        CompanyDetailsEntity company = new CompanyDetailsEntity();
+        CustomerEntity customer = new CustomerEntity();
+        customer.setId(5L);
+        customer.setName("Acme Ltd");
+        EstimateEntity estimate = new EstimateEntity();
+        estimate.setId(1L);
+        estimate.setCustomer(customer);
+        estimate.setQuotationNumber("QUO-001");
+        estimate.setStatus(EstimateStatus.DRAFT);
+        byte[] pdf = "%PDF-test".getBytes();
+
+        when(userService.getCurrentUser("owner@example.com")).thenReturn(user);
+        when(estimateService.findByIdForUser(1L, user)).thenReturn(estimate);
+        when(companyDetailsService.getForUser(user)).thenReturn(company);
+        when(companyDetailsService.getLogoResource(user)).thenReturn(Optional.empty());
+        when(documentPdfService.generateEstimatePdf(estimate, company, null)).thenReturn(pdf);
+
+        mockMvc.perform(get("/estimates/1/pdf"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_PDF))
+                .andExpect(header().string("Content-Disposition", "attachment; filename=\"quotation-QUO-001.pdf\""))
+                .andExpect(content().bytes(pdf));
     }
 
     @Test

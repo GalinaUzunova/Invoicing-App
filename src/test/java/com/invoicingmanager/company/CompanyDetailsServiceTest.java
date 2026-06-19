@@ -142,6 +142,20 @@ class CompanyDetailsServiceTest {
         assertThat(dto.isHasLogo()).isTrue();
     }
 
+    @Test
+    void constructorRejectsNullRepository() {
+        assertThatThrownBy(() -> new CompanyDetailsService(null, uploadDir.toString()))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessageContaining("companyDetailsRepository");
+    }
+
+    @Test
+    void constructorRejectsNullUploadDir() {
+        assertThatThrownBy(() -> new CompanyDetailsService(companyDetailsRepository, null))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessageContaining("uploadDir");
+    }
+
     private CompanyDetailsService service() {
         return new CompanyDetailsService(companyDetailsRepository, uploadDir.toString());
     }

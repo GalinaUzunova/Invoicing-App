@@ -1,7 +1,6 @@
 package com.invoicingmanager.customer;
 
 import com.invoicingmanager.user.UserEntity;
-import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import java.util.Objects;
 import org.springframework.http.HttpStatus;
@@ -15,27 +14,22 @@ public class CustomerService {
     private final CustomerRepository customerRepository;
 
     public CustomerService(CustomerRepository customerRepository) {
-        this.customerRepository = customerRepository;
+        this.customerRepository = Objects.requireNonNull(customerRepository, "customerRepository must not be null");
     }
 
     @Transactional(readOnly = true)
-    public List<CustomerEntity> findAllForUser(@NotNull UserEntity user) {
-        Objects.requireNonNull(user, "user must not be null");
+    public List<CustomerEntity> findAllForUser(UserEntity user) {
         return customerRepository.findByUserOrderByNameAsc(user);
     }
 
     @Transactional(readOnly = true)
-    public CustomerEntity findByIdForUser(@NotNull Long id, @NotNull UserEntity user) {
-        Objects.requireNonNull(id, "id must not be null");
-        Objects.requireNonNull(user, "user must not be null");
+    public CustomerEntity findByIdForUser(Long id, UserEntity user) {
         return customerRepository.findByIdAndUser(id, user)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Customer not found."));
     }
 
     @Transactional
-    public CustomerEntity create(@NotNull CustomerDTO customerDTO, @NotNull UserEntity user) {
-        Objects.requireNonNull(customerDTO, "customerDTO must not be null");
-        Objects.requireNonNull(user, "user must not be null");
+    public CustomerEntity create(CustomerDTO customerDTO, UserEntity user) {
         CustomerEntity customer = new CustomerEntity();
         customer.setUser(user);
         apply(customer, customerDTO);
@@ -43,25 +37,19 @@ public class CustomerService {
     }
 
     @Transactional
-    public CustomerEntity update(@NotNull Long id, @NotNull CustomerDTO customerDTO, @NotNull UserEntity user) {
-        Objects.requireNonNull(id, "id must not be null");
-        Objects.requireNonNull(customerDTO, "customerDTO must not be null");
-        Objects.requireNonNull(user, "user must not be null");
+    public CustomerEntity update(Long id, CustomerDTO customerDTO, UserEntity user) {
         CustomerEntity customer = findByIdForUser(id, user);
         apply(customer, customerDTO);
         return customerRepository.save(customer);
     }
 
     @Transactional
-    public void delete(@NotNull Long id, @NotNull UserEntity user) {
-        Objects.requireNonNull(id, "id must not be null");
-        Objects.requireNonNull(user, "user must not be null");
+    public void delete(Long id, UserEntity user) {
         CustomerEntity customer = findByIdForUser(id, user);
         customerRepository.delete(customer);
     }
 
-    public CustomerDTO toDTO(@NotNull CustomerEntity customer) {
-        Objects.requireNonNull(customer, "customer must not be null");
+    public CustomerDTO toDTO(CustomerEntity customer) {
         CustomerDTO customerDTO = new CustomerDTO();
         customerDTO.setId(customer.getId());
         customerDTO.setName(customer.getName());
@@ -76,8 +64,6 @@ public class CustomerService {
     }
 
     private void apply(CustomerEntity customer, CustomerDTO customerDTO) {
-        Objects.requireNonNull(customer, "customer must not be null");
-        Objects.requireNonNull(customerDTO, "customerDTO must not be null");
         customer.setName(trimRequired(customerDTO.getName(), "Customer name"));
         customer.setEmail(trimRequired(customerDTO.getEmail(), "Customer email"));
         customer.setPhone(trimRequired(customerDTO.getPhone(), "Customer phone"));

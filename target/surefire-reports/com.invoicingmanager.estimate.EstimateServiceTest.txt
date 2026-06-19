@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: com.invoicingmanager.estimate.EstimateServiceTest
 -------------------------------------------------------------------------------
-Tests run: 15, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.063 s -- in com.invoicingmanager.estimate.EstimateServiceTest
+Tests run: 18, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.175 s -- in com.invoicingmanager.estimate.EstimateServiceTest

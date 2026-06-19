@@ -1,6 +1,5 @@
 package com.invoicingmanager.invoice;
 
-import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Objects;
@@ -12,7 +11,7 @@ public class InvoiceCalculator {
     private static final BigDecimal ONE_HUNDRED = new BigDecimal("100");
     private static final int MONEY_SCALE = 2;
 
-    public void recalculate(@NotNull InvoiceEntity invoice) {
+    public void recalculate(InvoiceEntity invoice) {
         Objects.requireNonNull(invoice, "invoice must not be null");
         BigDecimal subtotal = BigDecimal.ZERO;
         BigDecimal taxTotal = BigDecimal.ZERO;

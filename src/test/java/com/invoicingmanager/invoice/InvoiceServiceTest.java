@@ -241,8 +241,8 @@ class InvoiceServiceTest {
         when(customerRepository.findByIdAndUser(5L, user)).thenReturn(Optional.of(customer(5L)));
 
         assertThatThrownBy(() -> service().create(dto, user))
-                .isInstanceOf(NullPointerException.class)
-                .hasMessageContaining("Line item quantity is required");
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Line item quantity must be greater than zero");
     }
 
     private InvoiceService service() {
@@ -257,6 +257,27 @@ class InvoiceServiceTest {
         dto.setDueDate(LocalDate.of(2026, 1, 15));
         dto.getLineItems().add(lineItemDTO());
         return dto;
+    }
+
+    @Test
+    void constructorRejectsNullRepository() {
+        assertThatThrownBy(() -> new InvoiceService(null, customerRepository, invoiceCalculator))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessageContaining("invoiceRepository");
+    }
+
+    @Test
+    void constructorRejectsNullCustomerRepository() {
+        assertThatThrownBy(() -> new InvoiceService(invoiceRepository, null, invoiceCalculator))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessageContaining("customerRepository");
+    }
+
+    @Test
+    void constructorRejectsNullCalculator() {
+        assertThatThrownBy(() -> new InvoiceService(invoiceRepository, customerRepository, null))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessageContaining("invoiceCalculator");
     }
 
     private InvoiceLineItemDTO lineItemDTO() {

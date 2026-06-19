@@ -66,7 +66,7 @@ class EstimateServiceTest {
     }
 
     @Test
-    void findByIdForUserReturnsEstimateOrThrowsNotFound() {
+    void findByIdMethodsReturnEstimateOrThrowNotFound() {
         UserEntity user = new UserEntity();
         EstimateEntity estimate = estimate(EstimateStatus.DRAFT);
         when(estimateRepository.findByIdAndUser(1L, user)).thenReturn(Optional.of(estimate));
@@ -74,6 +74,7 @@ class EstimateServiceTest {
 
         EstimateService estimateService = service();
 
+        assertThat(estimateService.findByIdAndUser(1L, user)).containsSame(estimate);
         assertThat(estimateService.findByIdForUser(1L, user)).isSameAs(estimate);
         assertThatThrownBy(() -> estimateService.findByIdForUser(2L, user))
                 .isInstanceOf(ResponseStatusException.class)
@@ -125,6 +126,7 @@ class EstimateServiceTest {
 
         assertThat(updated.getQuotationNumber()).isEqualTo("QUO-002");
         assertThat(updated.getGrandTotal()).isEqualByComparingTo("24.00");
+        verify(estimateRepository).save(estimate);
     }
 
     @Test
@@ -239,8 +241,29 @@ class EstimateServiceTest {
         when(customerRepository.findByIdAndUser(5L, user)).thenReturn(Optional.of(customer(5L)));
 
         assertThatThrownBy(() -> service().create(dto, user))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Line item unit price must be greater than zero");
+    }
+
+    @Test
+    void constructorRejectsNullRepository() {
+        assertThatThrownBy(() -> new EstimateService(null, customerRepository, estimateCalculator))
                 .isInstanceOf(NullPointerException.class)
-                .hasMessageContaining("Line item unit price is required");
+                .hasMessageContaining("estimateRepository");
+    }
+
+    @Test
+    void constructorRejectsNullCustomerRepository() {
+        assertThatThrownBy(() -> new EstimateService(estimateRepository, null, estimateCalculator))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessageContaining("customerRepository");
+    }
+
+    @Test
+    void constructorRejectsNullCalculator() {
+        assertThatThrownBy(() -> new EstimateService(estimateRepository, customerRepository, null))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessageContaining("estimateCalculator");
     }
 
     private EstimateService service() {

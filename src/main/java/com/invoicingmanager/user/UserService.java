@@ -1,6 +1,5 @@
 package com.invoicingmanager.user;
 
-import jakarta.validation.constraints.NotNull;
 import java.util.Locale;
 import java.util.Objects;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -15,13 +14,12 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
 
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
+        this.userRepository = Objects.requireNonNull(userRepository, "userRepository must not be null");
+        this.passwordEncoder = Objects.requireNonNull(passwordEncoder, "passwordEncoder must not be null");
     }
 
     @Transactional
-    public UserEntity register(@NotNull RegisterUserDTO registerUserDTO) {
-        Objects.requireNonNull(registerUserDTO, "registerUserDTO must not be null");
+    public UserEntity register(RegisterUserDTO registerUserDTO) {
         String normalizedEmail = normalizeEmail(registerUserDTO.getEmail());
 
         if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
@@ -40,7 +38,7 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public UserEntity getCurrentUser(@NotNull String email) {
+    public UserEntity getCurrentUser(String email) {
         String normalizedEmail = normalizeEmail(email);
         if (normalizedEmail.isBlank()) {
             throw new UsernameNotFoundException("Authenticated user not found.");

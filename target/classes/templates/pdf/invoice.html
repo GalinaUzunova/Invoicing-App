@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8" />
+    <title th:text="${invoice.invoiceNumber}">Invoice PDF</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 18mm 16mm;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            color: #0f172a;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+            line-height: 1.45;
+            margin: 0;
+        }
+
+        .document-title-table,
+        .document-header-table,
+        .details-table,
+        .totals-table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        .document-title {
+            color: #0f172a;
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            margin: 0;
+        }
+
+        .document-number {
+            color: #64748b;
+            font-size: 12px;
+            font-weight: 700;
+            margin: 4px 0 0;
+        }
+
+        .status {
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-radius: 999px;
+            color: #475569;
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 6px 12px;
+            text-transform: uppercase;
+        }
+
+        .document-header {
+            border-bottom: 1px solid #e2e8f0;
+            margin-top: 20px;
+            padding-bottom: 18px;
+        }
+
+        .logo-cell {
+            padding-right: 12px;
+            vertical-align: top;
+            width: 74px;
+        }
+
+        .logo {
+            display: block;
+            max-height: 64px;
+            max-width: 64px;
+        }
+
+        .eyebrow {
+            color: #64748b;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            margin: 0 0 6px;
+            text-transform: uppercase;
+        }
+
+        .name {
+            color: #0f172a;
+            font-size: 14px;
+            font-weight: 800;
+            margin: 0 0 5px;
+        }
+
+        .muted {
+            color: #475569;
+            margin: 0 0 4px;
+        }
+
+        .meta-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 10px 12px;
+        }
+
+        .meta-label {
+            color: #64748b;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            padding-right: 12px;
+            text-transform: uppercase;
+            vertical-align: top;
+            width: 42%;
+        }
+
+        .meta-value {
+            color: #0f172a;
+            font-weight: 800;
+            text-align: right;
+            vertical-align: top;
+            white-space: nowrap;
+            width: 58%;
+        }
+
+        .details-table td {
+            padding: 3px 0;
+        }
+
+        table.items {
+            border-collapse: collapse;
+            margin-top: 24px;
+            width: 100%;
+        }
+
+        .items th {
+            background: #f1f5f9;
+            color: #334155;
+            font-size: 10px;
+            letter-spacing: 0.08em;
+            padding: 11px 10px;
+            text-align: left;
+            text-transform: uppercase;
+        }
+
+        .items td {
+            border-bottom: 1px solid #e2e8f0;
+            padding: 12px 10px;
+            vertical-align: top;
+        }
+
+        .items .right {
+            text-align: right;
+        }
+
+        .item-name {
+            font-weight: 800;
+        }
+
+        .description {
+            color: #64748b;
+        }
+
+        .totals-wrap {
+            margin-left: auto;
+            margin-top: 20px;
+            width: 260px;
+        }
+
+        .totals-table td {
+            border-bottom: 1px solid #e2e8f0;
+            padding: 9px 0;
+        }
+
+        .totals-label {
+            color: #475569;
+            font-weight: 700;
+        }
+
+        .totals-value {
+            font-weight: 800;
+            text-align: right;
+        }
+
+        .grand td {
+            border-bottom: 0;
+            color: #1d4ed8;
+            font-size: 18px;
+            padding-top: 14px;
+        }
+
+        .notes {
+            background: #f8fafc;
+            border-left: 4px solid #1d4ed8;
+            border-radius: 12px;
+            color: #475569;
+            margin-top: 26px;
+            padding: 14px 16px;
+        }
+
+        .footer {
+            border-top: 1px solid #e2e8f0;
+            color: #94a3b8;
+            font-size: 10px;
+            margin-top: 30px;
+            padding-top: 12px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<table class="document-title-table">
+    <tr>
+        <td>
+            <p class="document-title">Invoice</p>
+            <p class="document-number" th:text="${invoice.invoiceNumber}">INV-001</p>
+        </td>
+        <td style="text-align: right; vertical-align: top;">
+            <span class="status" th:text="${invoice.status}">DRAFT</span>
+        </td>
+    </tr>
+</table>
+
+<div class="document-header">
+    <table class="document-header-table">
+        <tr>
+            <td class="logo-cell">
+                <img th:if="${logoDataUri != null}" class="logo" th:src="${logoDataUri}" alt="Company logo" />
+            </td>
+            <td style="width: 34%; padding-right: 22px; vertical-align: top;">
+                <p class="eyebrow">From</p>
+                <p class="name" th:text="${company.companyName} ?: 'Company details not set'">Company name</p>
+                <p class="muted" th:if="${company.address}" th:text="${company.address}">Address</p>
+                <p class="muted" th:if="${company.phone}" th:text="${company.phone}">Phone</p>
+                <p class="muted" th:if="${company.email}" th:text="${company.email}">Email</p>
+                <p class="muted" th:if="${company.vatNumber}">VAT reg. <strong th:text="${company.vatNumber}">VAT</strong></p>
+            </td>
+            <td style="width: 28%; padding-right: 18px; vertical-align: top;">
+                <p class="eyebrow">Bill to</p>
+                <p class="name" th:text="${invoice.customer.name}">Customer</p>
+                <p class="muted" th:if="${invoice.customer.email}" th:text="${invoice.customer.email}">Email</p>
+                <p class="muted" th:if="${invoice.customer.phone}" th:text="${invoice.customer.phone}">Phone</p>
+                <p class="muted" th:if="${invoice.customer.billingAddress}" th:text="${invoice.customer.billingAddress}">Address</p>
+            </td>
+            <td style="width: 32%; vertical-align: top;">
+                <div class="meta-box">
+                    <table class="details-table">
+                        <tr>
+                            <td class="meta-label">No.</td>
+                            <td class="meta-value" th:text="${invoice.invoiceNumber}">INV-001</td>
+                        </tr>
+                        <tr>
+                            <td class="meta-label">Issue date</td>
+                            <td class="meta-value" th:text="${invoice.issueDate}">2026-01-01</td>
+                        </tr>
+                        <tr>
+                            <td class="meta-label">Due date</td>
+                            <td class="meta-value" th:text="${invoice.dueDate} ?: '-'">2026-01-15</td>
+                        </tr>
+                    </table>
+                </div>
+            </td>
+        </tr>
+    </table>
+</div>
+
+<table class="items">
+    <thead>
+    <tr>
+        <th>Item</th>
+        <th>Description</th>
+        <th class="right">Qty</th>
+        <th class="right">Unit price</th>
+        <th class="right">Tax %</th>
+        <th class="right">Total</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="lineItem : ${invoice.lineItems}">
+        <td class="item-name" th:text="${lineItem.itemName}">Item</td>
+        <td class="description" th:text="${lineItem.description} ?: '-'">Description</td>
+        <td class="right" th:text="${lineItem.quantity}">1.00</td>
+        <td class="right" th:text="${lineItem.unitPrice}">0.00</td>
+        <td class="right" th:text="${lineItem.taxRate}">0.00</td>
+        <td class="right item-name" th:text="${lineItem.lineTotal}">0.00</td>
+    </tr>
+    </tbody>
+</table>
+
+<div class="totals-wrap">
+    <table class="totals-table">
+        <tr>
+            <td class="totals-label">Subtotal</td>
+            <td class="totals-value" th:text="${invoice.subtotal}">0.00</td>
+        </tr>
+        <tr>
+            <td class="totals-label">Tax</td>
+            <td class="totals-value" th:text="${invoice.taxTotal}">0.00</td>
+        </tr>
+        <tr class="grand">
+            <td class="totals-label">Total</td>
+            <td class="totals-value" th:text="${invoice.grandTotal}">0.00</td>
+        </tr>
+    </table>
+</div>
+
+<div th:if="${invoice.notes}" class="notes">
+    <strong>Notes</strong>
+    <p th:text="${invoice.notes}">Notes</p>
+</div>
+
+<p class="footer">Generated by Invoicing Manager</p>
+</body>
+</html>

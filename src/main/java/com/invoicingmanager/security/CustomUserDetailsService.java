@@ -2,7 +2,6 @@ package com.invoicingmanager.security;
 
 import com.invoicingmanager.user.UserEntity;
 import com.invoicingmanager.user.UserRepository;
-import jakarta.validation.constraints.NotNull;
 import java.util.Objects;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -16,12 +15,12 @@ public class CustomUserDetailsService implements UserDetailsService {
     private final UserRepository userRepository;
 
     public CustomUserDetailsService(UserRepository userRepository) {
-        this.userRepository = userRepository;
+        this.userRepository = Objects.requireNonNull(userRepository, "userRepository must not be null");
     }
 
     @Override
-    public UserDetails loadUserByUsername(@NotNull String email) {
-        String normalizedEmail = Objects.requireNonNull(email, "email must not be null").trim();
+    public UserDetails loadUserByUsername(String email) {
+        String normalizedEmail = email == null ? "" : email.trim();
         if (normalizedEmail.isBlank()) {
             throw new UsernameNotFoundException("User not found");
         }

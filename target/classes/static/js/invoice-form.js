@@ -66,16 +66,13 @@
     });
 
     lineItems.addEventListener("click", (event) => {
-        if (!event.target.matches("[data-remove-line-item]")) {
+        const removeButton = event.target.closest("[data-remove-line-item]");
+        if (!removeButton) {
             return;
         }
 
-        const rows = lineItems.querySelectorAll("[data-line-item-row]");
-        if (rows.length <= 1) {
-            return;
-        }
-
-        event.target.closest("[data-line-item-row]").remove();
+        event.preventDefault();
+        removeButton.closest("[data-line-item-row]").remove();
         reindexRows();
         recalculatePreview();
     });

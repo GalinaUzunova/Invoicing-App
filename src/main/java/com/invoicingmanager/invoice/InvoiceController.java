@@ -2,11 +2,16 @@ package com.invoicingmanager.invoice;
 
 import com.invoicingmanager.company.CompanyDetailsService;
 import com.invoicingmanager.customer.CustomerService;
+import com.invoicingmanager.pdf.DocumentPdfService;
 import com.invoicingmanager.user.UserEntity;
 import com.invoicingmanager.user.UserService;
 import jakarta.validation.Valid;
 import java.security.Principal;
 import java.util.Objects;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -24,17 +29,20 @@ public class InvoiceController {
     private final InvoiceService invoiceService;
     private final CustomerService customerService;
     private final CompanyDetailsService companyDetailsService;
+    private final DocumentPdfService documentPdfService;
     private final UserService userService;
 
     public InvoiceController(
             InvoiceService invoiceService,
             CustomerService customerService,
             CompanyDetailsService companyDetailsService,
+            DocumentPdfService documentPdfService,
             UserService userService
     ) {
         this.invoiceService = invoiceService;
         this.customerService = customerService;
         this.companyDetailsService = companyDetailsService;
+        this.documentPdfService = documentPdfService;
         this.userService = userService;
     }
 
@@ -57,6 +65,7 @@ public class InvoiceController {
     }
 
     @PostMapping
+    @SuppressWarnings("null")
     public String create(
             @Valid @ModelAttribute InvoiceDTO invoiceDTO,
             BindingResult bindingResult,
@@ -74,7 +83,7 @@ public class InvoiceController {
             InvoiceEntity invoice = invoiceService.create(invoiceDTO, user);
             return "redirect:/invoices/" + invoice.getId();
         } catch (IllegalArgumentException exception) {
-            bindingResult.rejectValue("invoiceNumber", "invoiceNumber.duplicate", exception.getMessage());
+            bindingResult.rejectValue("invoiceNumber", "invoiceNumber.duplicate", Objects.toString(exception.getMessage(), "Invalid invoice."));
             prepareFormModel(model, user, "New Invoice", "/invoices");
             return "invoices/form";
         }
@@ -90,6 +99,19 @@ public class InvoiceController {
         return "invoices/detail";
     }
 
+    @GetMapping("/{id}/pdf")
+    public ResponseEntity<byte[]> downloadPdf(@PathVariable Long id, Principal principal) {
+        UserEntity user = currentUser(principal);
+        InvoiceEntity invoice = invoiceService.findByIdForUser(id, user);
+        byte[] pdf = documentPdfService.generateInvoicePdf(
+                invoice,
+                companyDetailsService.getForUser(user),
+                logoDataUri(user)
+        );
+
+        return pdfResponse(pdf, "invoice-" + safeFilename(invoice.getInvoiceNumber()) + ".pdf");
+    }
+
     @GetMapping("/{id}/edit")
     public String editForm(@PathVariable Long id, Model model, Principal principal) {
         UserEntity user = currentUser(principal);
@@ -100,6 +122,7 @@ public class InvoiceController {
     }
 
     @PostMapping("/{id}")
+    @SuppressWarnings("null")
     public String update(
             @PathVariable Long id,
             @Valid @ModelAttribute InvoiceDTO invoiceDTO,
@@ -118,7 +141,7 @@ public class InvoiceController {
             invoiceService.update(id, invoiceDTO, user);
             return "redirect:/invoices/" + id;
         } catch (IllegalArgumentException exception) {
-            bindingResult.rejectValue("invoiceNumber", "invoiceNumber.duplicate", exception.getMessage());
+            bindingResult.rejectValue("invoiceNumber", "invoiceNumber.duplicate", Objects.toString(exception.getMessage(), "Invalid invoice."));
             prepareFormModel(model, user, "Edit Invoice", "/invoices/" + id);
             return "invoices/form";
         }
@@ -151,5 +174,27 @@ public class InvoiceController {
 
     private UserEntity currentUser(Principal principal) {
         return userService.getCurrentUser(Objects.requireNonNull(principal, "principal must not be null").getName());
+    }
+
+    private String logoDataUri(UserEntity user) {
+        return companyDetailsService.getLogoResource(user)
+                .flatMap(resource -> companyDetailsService.getLogoContentType(user)
+                        .flatMap(contentType -> documentPdfService.toPdfLogoDataUri(resource, contentType)))
+                .orElse(null);
+    }
+
+    @SuppressWarnings("null")
+    private ResponseEntity<byte[]> pdfResponse(byte[] pdf, String filename) {
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename(filename).build().toString())
+                .body(pdf);
+    }
+
+    private String safeFilename(String value) {
+        if (value == null || value.isBlank()) {
+            return "document";
+        }
+        return value.replaceAll("[^A-Za-z0-9._-]", "_");
     }
 }

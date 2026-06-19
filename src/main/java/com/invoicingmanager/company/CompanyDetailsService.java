@@ -1,7 +1,6 @@
 package com.invoicingmanager.company;
 
 import com.invoicingmanager.user.UserEntity;
-import jakarta.validation.constraints.NotNull;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -42,15 +41,12 @@ public class CompanyDetailsService {
     }
 
     @Transactional(readOnly = true)
-    public CompanyDetailsEntity getForUser(@NotNull UserEntity user) {
-        Objects.requireNonNull(user, "user must not be null");
-        return companyDetailsRepository.findByUser(user).orElseGet(() -> emptyDetails(user));
+    public CompanyDetailsEntity getForUser(UserEntity user) {
+        return companyDetailsRepository.findByUser(user).orElseGet(() -> createEmpty(user));
     }
 
     @Transactional
-    public CompanyDetailsEntity save(@NotNull CompanyDetailsDTO dto, MultipartFile logo, @NotNull UserEntity user) {
-        Objects.requireNonNull(dto, "dto must not be null");
-        Objects.requireNonNull(user, "user must not be null");
+    public CompanyDetailsEntity save(CompanyDetailsDTO dto, MultipartFile logo, UserEntity user) {
         CompanyDetailsEntity company = companyDetailsRepository.findByUser(user)
                 .orElseGet(() -> createEmpty(user));
 
@@ -68,37 +64,34 @@ public class CompanyDetailsService {
     }
 
     @Transactional
-    public void removeLogo(@NotNull UserEntity user) {
-        Objects.requireNonNull(user, "user must not be null");
-        CompanyDetailsEntity company = companyDetailsRepository.findByUser(user).orElse(null);
-        if (company == null || !company.hasLogo()) {
-            return;
-        }
-
-        deleteLogoFile(user, company.getLogoFilename());
-        company.setLogoFilename(null);
-        companyDetailsRepository.save(company);
+    public void removeLogo(UserEntity user) {
+        companyDetailsRepository.findByUser(user)
+                .filter(CompanyDetailsEntity::hasLogo)
+                .ifPresent(company -> {
+                    deleteLogoFile(user, company.getLogoFilename());
+                    company.setLogoFilename(null);
+                    companyDetailsRepository.save(company);
+                });
     }
 
     @Transactional(readOnly = true)
-    public Optional<Resource> getLogoResource(@NotNull UserEntity user) {
-        Objects.requireNonNull(user, "user must not be null");
+    @SuppressWarnings("null")
+    public Optional<Resource> getLogoResource(UserEntity user) {
         return companyDetailsRepository.findByUser(user)
                 .filter(CompanyDetailsEntity::hasLogo)
+                .filter(company -> company.getLogoFilename() != null)
                 .map(company -> (Resource) new FileSystemResource(logoPath(user, company.getLogoFilename())))
                 .filter(Resource::exists);
     }
 
     @Transactional(readOnly = true)
-    public Optional<String> getLogoContentType(@NotNull UserEntity user) {
-        Objects.requireNonNull(user, "user must not be null");
+    public Optional<String> getLogoContentType(UserEntity user) {
         return companyDetailsRepository.findByUser(user)
                 .filter(CompanyDetailsEntity::hasLogo)
                 .map(company -> contentTypeForFilename(company.getLogoFilename()));
     }
 
-    public CompanyDetailsDTO toDTO(@NotNull CompanyDetailsEntity company) {
-        Objects.requireNonNull(company, "company must not be null");
+    public CompanyDetailsDTO toDTO(CompanyDetailsEntity company) {
         CompanyDetailsDTO dto = new CompanyDetailsDTO();
         dto.setCompanyName(company.getCompanyName());
         dto.setVatNumber(company.getVatNumber());
@@ -110,23 +103,12 @@ public class CompanyDetailsService {
     }
 
     private CompanyDetailsEntity createEmpty(UserEntity user) {
-        Objects.requireNonNull(user, "user must not be null");
-        CompanyDetailsEntity company = new CompanyDetailsEntity();
-        company.setUser(user);
-        return company;
-    }
-
-    private CompanyDetailsEntity emptyDetails(UserEntity user) {
-        Objects.requireNonNull(user, "user must not be null");
         CompanyDetailsEntity company = new CompanyDetailsEntity();
         company.setUser(user);
         return company;
     }
 
     private void storeLogo(CompanyDetailsEntity company, MultipartFile logo, UserEntity user) {
-        Objects.requireNonNull(company, "company must not be null");
-        Objects.requireNonNull(logo, "logo must not be null");
-        Objects.requireNonNull(user, "user must not be null");
         String contentType = logo.getContentType();
         if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType.toLowerCase(Locale.ROOT))) {
             throw new IllegalArgumentException("Logo must be a JPEG, PNG, GIF, or WebP image.");
@@ -154,12 +136,10 @@ public class CompanyDetailsService {
     }
 
     private Path logoDirectory(UserEntity user) {
-        Objects.requireNonNull(user, "user must not be null");
         return uploadRoot.resolve("logos").resolve(String.valueOf(user.getId()));
     }
 
     private Path logoPath(UserEntity user, String filename) {
-        Objects.requireNonNull(filename, "filename must not be null");
         return logoDirectory(user).resolve(filename);
     }
 

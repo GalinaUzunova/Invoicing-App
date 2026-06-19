@@ -33,6 +33,7 @@ C:\Users\gbuzu\Desktop\Invoicing manager\src\main\java\com\invoicingmanager\invo
 C:\Users\gbuzu\Desktop\Invoicing manager\src\main\java\com\invoicingmanager\invoice\InvoiceService.java
 C:\Users\gbuzu\Desktop\Invoicing manager\src\main\java\com\invoicingmanager\invoice\InvoiceStatus.java
 C:\Users\gbuzu\Desktop\Invoicing manager\src\main\java\com\invoicingmanager\InvoicingManagerApplication.java
+C:\Users\gbuzu\Desktop\Invoicing manager\src\main\java\com\invoicingmanager\pdf\DocumentPdfService.java
 C:\Users\gbuzu\Desktop\Invoicing manager\src\main\java\com\invoicingmanager\security\CustomUserDetailsService.java
 C:\Users\gbuzu\Desktop\Invoicing manager\src\main\java\com\invoicingmanager\security\SecurityConfig.java
 C:\Users\gbuzu\Desktop\Invoicing manager\src\main\java\com\invoicingmanager\user\AuthController.java

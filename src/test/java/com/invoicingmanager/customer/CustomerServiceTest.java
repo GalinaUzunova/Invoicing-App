@@ -121,18 +121,6 @@ class CustomerServiceTest {
     }
 
     @Test
-    void requiredArgumentsAreNullSafe() {
-        CustomerService customerService = new CustomerService(customerRepository);
-
-        assertThatThrownBy(() -> customerService.findAllForUser(null))
-                .isInstanceOf(NullPointerException.class)
-                .hasMessageContaining("user");
-        assertThatThrownBy(() -> customerService.update(null, customerDTO(), new UserEntity()))
-                .isInstanceOf(NullPointerException.class)
-                .hasMessageContaining("id");
-    }
-
-    @Test
     void createRejectsBlankRequiredContactFields() {
         CustomerDTO dto = customerDTO();
         dto.setEmail(" ");
@@ -142,6 +130,13 @@ class CustomerServiceTest {
         assertThatThrownBy(() -> customerService.create(dto, new UserEntity()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Customer email is required");
+    }
+
+    @Test
+    void constructorRejectsNullRepository() {
+        assertThatThrownBy(() -> new CustomerService(null))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessageContaining("customerRepository");
     }
 
     private CustomerEntity customer(String name) {

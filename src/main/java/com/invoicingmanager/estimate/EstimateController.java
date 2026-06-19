@@ -2,11 +2,16 @@ package com.invoicingmanager.estimate;
 
 import com.invoicingmanager.company.CompanyDetailsService;
 import com.invoicingmanager.customer.CustomerService;
+import com.invoicingmanager.pdf.DocumentPdfService;
 import com.invoicingmanager.user.UserEntity;
 import com.invoicingmanager.user.UserService;
 import jakarta.validation.Valid;
 import java.security.Principal;
 import java.util.Objects;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -24,17 +29,20 @@ public class EstimateController {
     private final EstimateService estimateService;
     private final CustomerService customerService;
     private final CompanyDetailsService companyDetailsService;
+    private final DocumentPdfService documentPdfService;
     private final UserService userService;
 
     public EstimateController(
             EstimateService estimateService,
             CustomerService customerService,
             CompanyDetailsService companyDetailsService,
+            DocumentPdfService documentPdfService,
             UserService userService
     ) {
         this.estimateService = estimateService;
         this.customerService = customerService;
         this.companyDetailsService = companyDetailsService;
+        this.documentPdfService = documentPdfService;
         this.userService = userService;
     }
 
@@ -56,6 +64,7 @@ public class EstimateController {
     }
 
     @PostMapping
+    @SuppressWarnings("null")
     public String create(
             @Valid @ModelAttribute EstimateDTO estimateDTO,
             BindingResult bindingResult,
@@ -73,7 +82,7 @@ public class EstimateController {
             EstimateEntity estimate = estimateService.create(estimateDTO, user);
             return "redirect:/estimates/" + estimate.getId();
         } catch (IllegalArgumentException ex) {
-            bindingResult.rejectValue("quotationNumber", "quotationNumber.duplicate", ex.getMessage());
+            bindingResult.rejectValue("quotationNumber", "quotationNumber.duplicate", Objects.toString(ex.getMessage(), "Invalid estimate."));
             prepareFormModel(model, user, "New Estimate", "/estimates");
             return "estimates/form";
         }
@@ -89,6 +98,19 @@ public class EstimateController {
         return "estimates/detail";
     }
 
+    @GetMapping("/{id}/pdf")
+    public ResponseEntity<byte[]> downloadPdf(@PathVariable Long id, Principal principal) {
+        UserEntity user = currentUser(principal);
+        EstimateEntity estimate = estimateService.findByIdForUser(id, user);
+        byte[] pdf = documentPdfService.generateEstimatePdf(
+                estimate,
+                companyDetailsService.getForUser(user),
+                logoDataUri(user)
+        );
+
+        return pdfResponse(pdf, "quotation-" + safeFilename(estimate.getQuotationNumber()) + ".pdf");
+    }
+
     @GetMapping("/{id}/edit")
     public String editForm(@PathVariable Long id, Model model, Principal principal) {
         UserEntity user = currentUser(principal);
@@ -99,6 +121,7 @@ public class EstimateController {
     }
 
     @PostMapping("/{id}")
+    @SuppressWarnings("null")
     public String update(
             @PathVariable Long id,
             @Valid @ModelAttribute EstimateDTO estimateDTO,
@@ -117,7 +140,7 @@ public class EstimateController {
             estimateService.update(id, estimateDTO, user);
             return "redirect:/estimates/" + id;
         } catch (IllegalArgumentException ex) {
-            bindingResult.rejectValue("quotationNumber", "quotationNumber.duplicate", ex.getMessage());
+            bindingResult.rejectValue("quotationNumber", "quotationNumber.duplicate", Objects.toString(ex.getMessage(), "Invalid estimate."));
             prepareFormModel(model, user, "Edit Estimate", "/estimates/" + id);
             return "estimates/form";
         }
@@ -156,5 +179,27 @@ public class EstimateController {
 
     private UserEntity currentUser(Principal principal) {
         return userService.getCurrentUser(Objects.requireNonNull(principal, "principal must not be null").getName());
+    }
+
+    private String logoDataUri(UserEntity user) {
+        return companyDetailsService.getLogoResource(user)
+                .flatMap(resource -> companyDetailsService.getLogoContentType(user)
+                        .flatMap(contentType -> documentPdfService.toPdfLogoDataUri(resource, contentType)))
+                .orElse(null);
+    }
+
+    @SuppressWarnings("null")
+    private ResponseEntity<byte[]> pdfResponse(byte[] pdf, String filename) {
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename(filename).build().toString())
+                .body(pdf);
+    }
+
+    private String safeFilename(String value) {
+        if (value == null || value.isBlank()) {
+            return "document";
+        }
+        return value.replaceAll("[^A-Za-z0-9._-]", "_");
     }
 }
