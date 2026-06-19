@@ -6,6 +6,7 @@ import com.invoicingmanager.user.UserEntity;
 import com.invoicingmanager.user.UserService;
 import jakarta.validation.Valid;
 import java.security.Principal;
+import java.util.Objects;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -154,6 +155,6 @@ public class EstimateController {
     }
 
     private UserEntity currentUser(Principal principal) {
-        return userService.getCurrentUser(principal.getName());
+        return userService.getCurrentUser(Objects.requireNonNull(principal, "principal must not be null").getName());
     }
 }

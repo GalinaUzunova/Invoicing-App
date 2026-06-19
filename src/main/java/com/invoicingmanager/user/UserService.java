@@ -1,6 +1,8 @@
 package com.invoicingmanager.user;
 
+import jakarta.validation.constraints.NotNull;
 import java.util.Locale;
+import java.util.Objects;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -18,7 +20,8 @@ public class UserService {
     }
 
     @Transactional
-    public UserEntity register(RegisterUserDTO registerUserDTO) {
+    public UserEntity register(@NotNull RegisterUserDTO registerUserDTO) {
+        Objects.requireNonNull(registerUserDTO, "registerUserDTO must not be null");
         String normalizedEmail = normalizeEmail(registerUserDTO.getEmail());
 
         if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
@@ -26,10 +29,10 @@ public class UserService {
         }
 
         UserEntity user = new UserEntity();
-        user.setFirstName(registerUserDTO.getFirstName().trim());
-        user.setLastName(registerUserDTO.getLastName().trim());
+        user.setFirstName(trimRequired(registerUserDTO.getFirstName(), "firstName"));
+        user.setLastName(trimRequired(registerUserDTO.getLastName(), "lastName"));
         user.setEmail(normalizedEmail);
-        user.setPasswordHash(passwordEncoder.encode(registerUserDTO.getPassword()));
+        user.setPasswordHash(passwordEncoder.encode(trimRequired(registerUserDTO.getPassword(), "password")));
         user.setRole("ROLE_USER");
         user.setEnabled(true);
 
@@ -37,12 +40,24 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public UserEntity getCurrentUser(String email) {
-        return userRepository.findByEmailIgnoreCase(email)
+    public UserEntity getCurrentUser(@NotNull String email) {
+        String normalizedEmail = normalizeEmail(email);
+        if (normalizedEmail.isBlank()) {
+            throw new UsernameNotFoundException("Authenticated user not found.");
+        }
+
+        return userRepository.findByEmailIgnoreCase(normalizedEmail)
                 .orElseThrow(() -> new UsernameNotFoundException("Authenticated user not found."));
     }
 
     private String normalizeEmail(String email) {
         return email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private String trimRequired(String value, String fieldName) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(fieldName + " is required.");
+        }
+        return value.trim();
     }
 }

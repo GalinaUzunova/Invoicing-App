@@ -54,7 +54,7 @@ public class InvoiceLineItemEntity {
     private BigDecimal quantity = BigDecimal.ONE;
 
     @NotNull
-    @DecimalMin(value = "0.00")
+    @DecimalMin(value = "0.01", message = "Unit price must be greater than zero")
     @Column(name = "unit_price", nullable = false, precision = 19, scale = 2)
     private BigDecimal unitPrice = BigDecimal.ZERO;
 

@@ -18,7 +18,9 @@ import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -28,6 +30,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -75,6 +78,7 @@ public class InvoiceEntity {
     @Column(name = "issue_date", nullable = false)
     private LocalDate issueDate;
 
+    @FutureOrPresent(message = "Due date cannot be in the past")
     @Column(name = "due_date")
     private LocalDate dueDate;
 
@@ -109,22 +113,26 @@ public class InvoiceEntity {
     private LocalDateTime updatedAt;
 
     public void setLineItems(Collection<InvoiceLineItemEntity> lineItems) {
+        Objects.requireNonNull(lineItems, "lineItems must not be null");
         this.lineItems.clear();
-
-        if (lineItems == null) {
-            return;
-        }
 
         lineItems.forEach(this::addLineItem);
     }
 
     public void addLineItem(InvoiceLineItemEntity lineItem) {
+        Objects.requireNonNull(lineItem, "lineItem must not be null");
         lineItems.add(lineItem);
         lineItem.setInvoice(this);
     }
 
     public void removeLineItem(InvoiceLineItemEntity lineItem) {
+        Objects.requireNonNull(lineItem, "lineItem must not be null");
         lineItems.remove(lineItem);
         lineItem.setInvoice(null);
+    }
+
+    @AssertTrue(message = "Due date cannot be earlier than issue date")
+    public boolean isDueDateOnOrAfterIssueDate() {
+        return issueDate == null || dueDate == null || !dueDate.isBefore(issueDate);
     }
 }

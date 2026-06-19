@@ -1,11 +1,13 @@
 package com.invoicingmanager.company;
 
 import com.invoicingmanager.user.UserEntity;
+import jakarta.validation.constraints.NotNull;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,25 +37,28 @@ public class CompanyDetailsService {
             CompanyDetailsRepository companyDetailsRepository,
             @Value("${app.upload.dir:uploads}") String uploadDir
     ) {
-        this.companyDetailsRepository = companyDetailsRepository;
-        this.uploadRoot = Path.of(uploadDir).toAbsolutePath().normalize();
+        this.companyDetailsRepository = Objects.requireNonNull(companyDetailsRepository, "companyDetailsRepository must not be null");
+        this.uploadRoot = Path.of(Objects.requireNonNull(uploadDir, "uploadDir must not be null")).toAbsolutePath().normalize();
     }
 
     @Transactional(readOnly = true)
-    public CompanyDetailsEntity getForUser(UserEntity user) {
+    public CompanyDetailsEntity getForUser(@NotNull UserEntity user) {
+        Objects.requireNonNull(user, "user must not be null");
         return companyDetailsRepository.findByUser(user).orElseGet(() -> emptyDetails(user));
     }
 
     @Transactional
-    public CompanyDetailsEntity save(CompanyDetailsDTO dto, MultipartFile logo, UserEntity user) {
+    public CompanyDetailsEntity save(@NotNull CompanyDetailsDTO dto, MultipartFile logo, @NotNull UserEntity user) {
+        Objects.requireNonNull(dto, "dto must not be null");
+        Objects.requireNonNull(user, "user must not be null");
         CompanyDetailsEntity company = companyDetailsRepository.findByUser(user)
                 .orElseGet(() -> createEmpty(user));
 
-        company.setCompanyName(trim(dto.getCompanyName()));
+        company.setCompanyName(trimRequired(dto.getCompanyName(), "Company name"));
         company.setVatNumber(trim(dto.getVatNumber()));
         company.setAddress(trim(dto.getAddress()));
-        company.setEmail(trim(dto.getEmail()));
-        company.setPhone(trim(dto.getPhone()));
+        company.setEmail(trimRequired(dto.getEmail(), "Company email"));
+        company.setPhone(trimRequired(dto.getPhone(), "Company phone"));
 
         if (logo != null && !logo.isEmpty()) {
             storeLogo(company, logo, user);
@@ -63,7 +68,8 @@ public class CompanyDetailsService {
     }
 
     @Transactional
-    public void removeLogo(UserEntity user) {
+    public void removeLogo(@NotNull UserEntity user) {
+        Objects.requireNonNull(user, "user must not be null");
         CompanyDetailsEntity company = companyDetailsRepository.findByUser(user).orElse(null);
         if (company == null || !company.hasLogo()) {
             return;
@@ -75,7 +81,8 @@ public class CompanyDetailsService {
     }
 
     @Transactional(readOnly = true)
-    public Optional<Resource> getLogoResource(UserEntity user) {
+    public Optional<Resource> getLogoResource(@NotNull UserEntity user) {
+        Objects.requireNonNull(user, "user must not be null");
         return companyDetailsRepository.findByUser(user)
                 .filter(CompanyDetailsEntity::hasLogo)
                 .map(company -> (Resource) new FileSystemResource(logoPath(user, company.getLogoFilename())))
@@ -83,13 +90,15 @@ public class CompanyDetailsService {
     }
 
     @Transactional(readOnly = true)
-    public Optional<String> getLogoContentType(UserEntity user) {
+    public Optional<String> getLogoContentType(@NotNull UserEntity user) {
+        Objects.requireNonNull(user, "user must not be null");
         return companyDetailsRepository.findByUser(user)
                 .filter(CompanyDetailsEntity::hasLogo)
                 .map(company -> contentTypeForFilename(company.getLogoFilename()));
     }
 
-    public CompanyDetailsDTO toDTO(CompanyDetailsEntity company) {
+    public CompanyDetailsDTO toDTO(@NotNull CompanyDetailsEntity company) {
+        Objects.requireNonNull(company, "company must not be null");
         CompanyDetailsDTO dto = new CompanyDetailsDTO();
         dto.setCompanyName(company.getCompanyName());
         dto.setVatNumber(company.getVatNumber());
@@ -101,18 +110,23 @@ public class CompanyDetailsService {
     }
 
     private CompanyDetailsEntity createEmpty(UserEntity user) {
+        Objects.requireNonNull(user, "user must not be null");
         CompanyDetailsEntity company = new CompanyDetailsEntity();
         company.setUser(user);
         return company;
     }
 
     private CompanyDetailsEntity emptyDetails(UserEntity user) {
+        Objects.requireNonNull(user, "user must not be null");
         CompanyDetailsEntity company = new CompanyDetailsEntity();
         company.setUser(user);
         return company;
     }
 
     private void storeLogo(CompanyDetailsEntity company, MultipartFile logo, UserEntity user) {
+        Objects.requireNonNull(company, "company must not be null");
+        Objects.requireNonNull(logo, "logo must not be null");
+        Objects.requireNonNull(user, "user must not be null");
         String contentType = logo.getContentType();
         if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType.toLowerCase(Locale.ROOT))) {
             throw new IllegalArgumentException("Logo must be a JPEG, PNG, GIF, or WebP image.");
@@ -140,10 +154,12 @@ public class CompanyDetailsService {
     }
 
     private Path logoDirectory(UserEntity user) {
+        Objects.requireNonNull(user, "user must not be null");
         return uploadRoot.resolve("logos").resolve(String.valueOf(user.getId()));
     }
 
     private Path logoPath(UserEntity user, String filename) {
+        Objects.requireNonNull(filename, "filename must not be null");
         return logoDirectory(user).resolve(filename);
     }
 
@@ -181,5 +197,13 @@ public class CompanyDetailsService {
 
     private String trim(String value) {
         return value == null ? null : value.trim();
+    }
+
+    private String trimRequired(String value, String fieldName) {
+        String trimmed = trim(value);
+        if (trimmed == null || trimmed.isBlank()) {
+            throw new IllegalArgumentException(fieldName + " is required.");
+        }
+        return trimmed;
     }
 }

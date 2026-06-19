@@ -7,11 +7,13 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
@@ -56,6 +58,40 @@ class UserServiceTest {
 
         verify(passwordEncoder, never()).encode(any());
         verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void getCurrentUserNormalizesEmailAndReturnsUser() {
+        UserEntity user = new UserEntity();
+        user.setEmail("owner@example.com");
+        when(userRepository.findByEmailIgnoreCase("owner@example.com")).thenReturn(Optional.of(user));
+
+        UserService userService = new UserService(userRepository, passwordEncoder);
+
+        assertThat(userService.getCurrentUser(" Owner@Example.com ")).isSameAs(user);
+    }
+
+    @Test
+    void getCurrentUserRejectsBlankOrMissingUser() {
+        UserService userService = new UserService(userRepository, passwordEncoder);
+
+        assertThatThrownBy(() -> userService.getCurrentUser(" "))
+                .isInstanceOf(UsernameNotFoundException.class)
+                .hasMessageContaining("Authenticated user not found");
+
+        when(userRepository.findByEmailIgnoreCase("missing@example.com")).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> userService.getCurrentUser("missing@example.com"))
+                .isInstanceOf(UsernameNotFoundException.class)
+                .hasMessageContaining("Authenticated user not found");
+    }
+
+    @Test
+    void registerRejectsNullDto() {
+        UserService userService = new UserService(userRepository, passwordEncoder);
+
+        assertThatThrownBy(() -> userService.register(null))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessageContaining("registerUserDTO");
     }
 
     private RegisterUserDTO registerUserDTO() {

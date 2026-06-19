@@ -3,10 +3,13 @@ package com.invoicingmanager.invoice;
 import com.invoicingmanager.customer.CustomerEntity;
 import com.invoicingmanager.customer.CustomerRepository;
 import com.invoicingmanager.user.UserEntity;
+import jakarta.validation.constraints.NotNull;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -40,7 +43,8 @@ public class InvoiceService {
     }
 
     @Transactional(readOnly = true)
-    public List<InvoiceEntity> findAllForUser(UserEntity user, InvoiceStatus status) {
+    public List<InvoiceEntity> findAllForUser(@NotNull UserEntity user, InvoiceStatus status) {
+        Objects.requireNonNull(user, "user must not be null");
         if (status == null) {
             return invoiceRepository.findByUserOrderByIssueDateDescCreatedAtDesc(user);
         }
@@ -49,18 +53,24 @@ public class InvoiceService {
     }
 
     @Transactional(readOnly = true)
-    public List<InvoiceEntity> findByCustomer(CustomerEntity customer, UserEntity user) {
+    public List<InvoiceEntity> findByCustomer(@NotNull CustomerEntity customer, @NotNull UserEntity user) {
+        Objects.requireNonNull(customer, "customer must not be null");
+        Objects.requireNonNull(user, "user must not be null");
         return invoiceRepository.findByCustomerAndUserOrderByIssueDateDescCreatedAtDesc(customer, user);
     }
 
     @Transactional(readOnly = true)
-    public InvoiceEntity findByIdForUser(Long id, UserEntity user) {
+    public InvoiceEntity findByIdForUser(@NotNull Long id, @NotNull UserEntity user) {
+        Objects.requireNonNull(id, "id must not be null");
+        Objects.requireNonNull(user, "user must not be null");
         return invoiceRepository.findByIdAndUser(id, user)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invoice not found."));
     }
 
     @Transactional
-    public InvoiceEntity create(InvoiceDTO invoiceDTO, UserEntity user) {
+    public InvoiceEntity create(@NotNull InvoiceDTO invoiceDTO, @NotNull UserEntity user) {
+        Objects.requireNonNull(invoiceDTO, "invoiceDTO must not be null");
+        Objects.requireNonNull(user, "user must not be null");
         assertInvoiceNumberAvailable(invoiceDTO.getInvoiceNumber(), null, user);
 
         InvoiceEntity invoice = new InvoiceEntity();
@@ -72,7 +82,10 @@ public class InvoiceService {
     }
 
     @Transactional
-    public InvoiceEntity update(Long id, InvoiceDTO invoiceDTO, UserEntity user) {
+    public InvoiceEntity update(@NotNull Long id, @NotNull InvoiceDTO invoiceDTO, @NotNull UserEntity user) {
+        Objects.requireNonNull(id, "id must not be null");
+        Objects.requireNonNull(invoiceDTO, "invoiceDTO must not be null");
+        Objects.requireNonNull(user, "user must not be null");
         InvoiceEntity invoice = findByIdForUser(id, user);
         assertInvoiceNumberAvailable(invoiceDTO.getInvoiceNumber(), id, user);
         apply(invoice, invoiceDTO, user);
@@ -81,13 +94,17 @@ public class InvoiceService {
     }
 
     @Transactional
-    public void delete(Long id, UserEntity user) {
+    public void delete(@NotNull Long id, @NotNull UserEntity user) {
+        Objects.requireNonNull(id, "id must not be null");
+        Objects.requireNonNull(user, "user must not be null");
         InvoiceEntity invoice = findByIdForUser(id, user);
         invoiceRepository.delete(invoice);
     }
 
     @Transactional
-    public InvoiceEntity markSent(Long id, UserEntity user) {
+    public InvoiceEntity markSent(@NotNull Long id, @NotNull UserEntity user) {
+        Objects.requireNonNull(id, "id must not be null");
+        Objects.requireNonNull(user, "user must not be null");
         InvoiceEntity invoice = findByIdForUser(id, user);
 
         if (invoice.getStatus() == InvoiceStatus.PAID) {
@@ -99,13 +116,16 @@ public class InvoiceService {
     }
 
     @Transactional
-    public InvoiceEntity markPaid(Long id, UserEntity user) {
+    public InvoiceEntity markPaid(@NotNull Long id, @NotNull UserEntity user) {
+        Objects.requireNonNull(id, "id must not be null");
+        Objects.requireNonNull(user, "user must not be null");
         InvoiceEntity invoice = findByIdForUser(id, user);
         invoice.setStatus(InvoiceStatus.PAID);
         return invoiceRepository.save(invoice);
     }
 
-    public InvoiceDTO toDTO(InvoiceEntity invoice) {
+    public InvoiceDTO toDTO(@NotNull InvoiceEntity invoice) {
+        Objects.requireNonNull(invoice, "invoice must not be null");
         InvoiceDTO invoiceDTO = new InvoiceDTO();
         invoiceDTO.setId(invoice.getId());
         invoiceDTO.setCustomerId(invoice.getCustomer().getId());
@@ -129,9 +149,17 @@ public class InvoiceService {
     }
 
     private void apply(InvoiceEntity invoice, InvoiceDTO invoiceDTO, UserEntity user) {
+        Objects.requireNonNull(invoice, "invoice must not be null");
+        Objects.requireNonNull(invoiceDTO, "invoiceDTO must not be null");
+        Objects.requireNonNull(user, "user must not be null");
+
         if (invoiceDTO.getLineItems() == null || invoiceDTO.getLineItems().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "At least one line item is required.");
         }
+        if (invoiceDTO.getCustomerId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Customer is required.");
+        }
+        validateDateOrder(invoiceDTO);
 
         CustomerEntity customer = customerRepository.findByIdAndUser(invoiceDTO.getCustomerId(), user)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Customer not found."));
@@ -146,28 +174,48 @@ public class InvoiceService {
     }
 
     private List<InvoiceLineItemEntity> toLineItemEntities(List<InvoiceLineItemDTO> lineItemDTOs) {
+        Objects.requireNonNull(lineItemDTOs, "lineItemDTOs must not be null");
         return lineItemDTOs.stream()
                 .map(this::toLineItemEntity)
                 .toList();
     }
 
     private InvoiceLineItemEntity toLineItemEntity(InvoiceLineItemDTO lineItemDTO) {
+        Objects.requireNonNull(lineItemDTO, "lineItemDTO must not be null");
         InvoiceLineItemEntity lineItem = new InvoiceLineItemEntity();
-        lineItem.setItemName(trim(lineItemDTO.getItemName()));
+        lineItem.setItemName(trimRequired(lineItemDTO.getItemName(), "Line item name"));
         lineItem.setDescription(trim(lineItemDTO.getDescription()));
-        lineItem.setQuantity(lineItemDTO.getQuantity());
-        lineItem.setUnitPrice(lineItemDTO.getUnitPrice());
-        lineItem.setTaxRate(lineItemDTO.getTaxRate());
+        BigDecimal quantity = Objects.requireNonNull(lineItemDTO.getQuantity(), "Line item quantity is required.");
+        if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Line item quantity must be greater than zero.");
+        }
+        lineItem.setQuantity(quantity);
+        BigDecimal unitPrice = Objects.requireNonNull(lineItemDTO.getUnitPrice(), "Line item unit price is required.");
+        if (unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Line item unit price must be greater than zero.");
+        }
+        lineItem.setUnitPrice(unitPrice);
+        lineItem.setTaxRate(Objects.requireNonNull(lineItemDTO.getTaxRate(), "Line item tax rate is required."));
         return lineItem;
     }
 
     private void assertInvoiceNumberAvailable(String invoiceNumber, Long currentInvoiceId, UserEntity user) {
+        Objects.requireNonNull(user, "user must not be null");
         String normalizedInvoiceNumber = trim(invoiceNumber);
+        if (normalizedInvoiceNumber == null || normalizedInvoiceNumber.isBlank()) {
+            throw new IllegalArgumentException("Invoice number is required.");
+        }
         invoiceRepository.findByUserAndInvoiceNumberIgnoreCase(user, normalizedInvoiceNumber)
                 .filter(invoice -> currentInvoiceId == null || !invoice.getId().equals(currentInvoiceId))
                 .ifPresent(invoice -> {
                     throw new IllegalArgumentException("Invoice number already exists.");
                 });
+    }
+
+    private void validateDateOrder(InvoiceDTO invoiceDTO) {
+        if (!invoiceDTO.isDueDateOnOrAfterIssueDate()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Due date cannot be earlier than issue date.");
+        }
     }
 
     private String generateInvoiceNumber() {
@@ -178,5 +226,13 @@ public class InvoiceService {
 
     private String trim(String value) {
         return value == null ? null : value.trim();
+    }
+
+    private String trimRequired(String value, String fieldName) {
+        String trimmed = trim(value);
+        if (trimmed == null || trimmed.isBlank()) {
+            throw new IllegalArgumentException(fieldName + " is required.");
+        }
+        return trimmed;
     }
 }

@@ -17,9 +17,11 @@ public class CustomerDTO {
     private String name;
 
     @Email
+    @NotBlank
     @Size(max = 255)
     private String email;
 
+    @NotBlank
     @Size(max = 50)
     private String phone;
 

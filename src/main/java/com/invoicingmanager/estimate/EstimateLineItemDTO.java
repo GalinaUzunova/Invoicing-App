@@ -26,7 +26,8 @@ public class EstimateLineItemDTO {
     private BigDecimal quantity = BigDecimal.ONE;
 
     @NotNull
-    @DecimalMin("0.00")
+    @DecimalMin(value = "0.01", message = "Unit price must be greater than zero")
+    @Digits(integer = 10, fraction = 2)
     private BigDecimal unitPrice = BigDecimal.ZERO;
 
     @NotNull

@@ -1,4 +1,4 @@
+com\invoicingmanager\customer\CustomerControllerTest.class
 com\invoicingmanager\user\UserServiceTest.class
 com\invoicingmanager\dashboard\DashboardServiceTest.class
 com\invoicingmanager\invoice\InvoiceCalculatorTest.class
-com\invoicingmanager\customer\CustomerControllerTest.class

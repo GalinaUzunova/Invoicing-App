@@ -43,12 +43,14 @@ public class CustomerEntity {
     private String name;
 
     @Email
+    @NotBlank
     @Size(max = 255)
-    @Column(name = "email")
+    @Column(name = "email", nullable = false)
     private String email;
 
+    @NotBlank
     @Size(max = 50)
-    @Column(name = "phone", length = 50)
+    @Column(name = "phone", nullable = false, length = 50)
     private String phone;
 
     @Size(max = 500)

@@ -11,6 +11,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
 import lombok.Getter;
@@ -30,12 +32,14 @@ public class CompanyDetailsEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotNull
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private UserEntity user;
 
+    @NotBlank
     @Size(max = 200)
-    @Column(name = "company_name", length = 200)
+    @Column(name = "company_name", nullable = false, length = 200)
     private String companyName;
 
     @Size(max = 50)
@@ -47,12 +51,14 @@ public class CompanyDetailsEntity {
     private String address;
 
     @Email
+    @NotBlank
     @Size(max = 255)
-    @Column(name = "email", length = 255)
+    @Column(name = "email", nullable = false, length = 255)
     private String email;
 
+    @NotBlank
     @Size(max = 50)
-    @Column(name = "phone", length = 50)
+    @Column(name = "phone", nullable = false, length = 50)
     private String phone;
 
     @Size(max = 255)

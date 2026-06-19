@@ -23,8 +23,8 @@
 
             <p class="form-section-title">Company information</p>
             <div class="mb-3">
-                <label class="form-label" for="companyName">Company name</label>
-                <input class="form-control" id="companyName" th:field="*{companyName}" placeholder="Your company name">
+                <label class="form-label" for="companyName">Company name <span class="text-danger">*</span></label>
+                <input class="form-control" id="companyName" th:field="*{companyName}" placeholder="Your company name" required>
                 <div class="field-error" th:errors="*{companyName}"></div>
             </div>
 
@@ -35,8 +35,8 @@
                     <div class="field-error" th:errors="*{vatNumber}"></div>
                 </div>
                 <div class="col-md-6 mb-3">
-                    <label class="form-label" for="phone">Phone</label>
-                    <input class="form-control" id="phone" th:field="*{phone}" placeholder="+1 234 567 890">
+                    <label class="form-label" for="phone">Phone <span class="text-danger">*</span></label>
+                    <input class="form-control" id="phone" th:field="*{phone}" placeholder="+1 234 567 890" required>
                     <div class="field-error" th:errors="*{phone}"></div>
                 </div>
             </div>
@@ -48,8 +48,8 @@
             </div>
 
             <div class="mb-3">
-                <label class="form-label" for="email">Email</label>
-                <input class="form-control" id="email" type="email" th:field="*{email}" placeholder="billing@company.com">
+                <label class="form-label" for="email">Email <span class="text-danger">*</span></label>
+                <input class="form-control" id="email" type="email" th:field="*{email}" placeholder="billing@company.com" required>
                 <div class="field-error" th:errors="*{email}"></div>
             </div>
 

@@ -4,6 +4,7 @@ import com.invoicingmanager.user.UserEntity;
 import com.invoicingmanager.user.UserService;
 import jakarta.validation.Valid;
 import java.security.Principal;
+import java.util.Objects;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -85,6 +86,6 @@ public class CompanyDetailsController {
     }
 
     private UserEntity currentUser(Principal principal) {
-        return userService.getCurrentUser(principal.getName());
+        return userService.getCurrentUser(Objects.requireNonNull(principal, "principal must not be null").getName());
     }
 }

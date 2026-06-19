@@ -28,13 +28,13 @@
             </div>
             <div class="row">
                 <div class="col-md-6 mb-3">
-                    <label class="form-label" for="email">Email</label>
-                    <input class="form-control" id="email" type="email" th:field="*{email}" placeholder="customer@example.com">
+                    <label class="form-label" for="email">Email <span class="text-danger">*</span></label>
+                    <input class="form-control" id="email" type="email" th:field="*{email}" placeholder="customer@example.com" required>
                     <div class="field-error" th:errors="*{email}"></div>
                 </div>
                 <div class="col-md-6 mb-3">
-                    <label class="form-label" for="phone">Phone</label>
-                    <input class="form-control" id="phone" th:field="*{phone}">
+                    <label class="form-label" for="phone">Phone <span class="text-danger">*</span></label>
+                    <input class="form-control" id="phone" th:field="*{phone}" required>
                     <div class="field-error" th:errors="*{phone}"></div>
                 </div>
             </div>

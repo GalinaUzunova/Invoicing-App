@@ -1,6 +1,7 @@
 package com.invoicingmanager.invoice;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
@@ -32,6 +33,27 @@ class InvoiceCalculatorTest {
         assertThat(invoice.getSubtotal()).isEqualByComparingTo("1.00");
         assertThat(invoice.getTaxTotal()).isEqualByComparingTo("0.20");
         assertThat(invoice.getGrandTotal()).isEqualByComparingTo("1.20");
+    }
+
+    @Test
+    void treatsNullableMoneyFieldsAsZero() {
+        InvoiceEntity invoice = new InvoiceEntity();
+        InvoiceLineItemEntity lineItem = new InvoiceLineItemEntity();
+        lineItem.setItemName("Service");
+        invoice.addLineItem(lineItem);
+
+        invoiceCalculator.recalculate(invoice);
+
+        assertThat(invoice.getSubtotal()).isEqualByComparingTo("0.00");
+        assertThat(invoice.getTaxTotal()).isEqualByComparingTo("0.00");
+        assertThat(invoice.getGrandTotal()).isEqualByComparingTo("0.00");
+    }
+
+    @Test
+    void rejectsNullInvoice() {
+        assertThatThrownBy(() -> invoiceCalculator.recalculate(null))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessageContaining("invoice");
     }
 
     private InvoiceLineItemEntity lineItem(String quantity, String unitPrice, String taxRate) {
