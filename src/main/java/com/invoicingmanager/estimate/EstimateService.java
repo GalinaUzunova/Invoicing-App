@@ -11,12 +11,14 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
+@Slf4j
 public class EstimateService {
 
     private final EstimateRepository estimateRepository;
@@ -44,56 +46,70 @@ public class EstimateService {
 
     @Transactional(readOnly = true)
     public List<EstimateEntity> findAllForUser(UserEntity user, EstimateStatus status) {
+        UserEntity requiredUser = requireArgument(user, "user");
         if (status == null) {
-            return estimateRepository.findByUserOrderByIssueDateDescCreatedAtDesc(user);
+            return estimateRepository.findByUserOrderByIssueDateDescCreatedAtDesc(requiredUser);
         }
-        return estimateRepository.findByUserAndStatusOrderByIssueDateDescCreatedAtDesc(user, status);
+        return estimateRepository.findByUserAndStatusOrderByIssueDateDescCreatedAtDesc(requiredUser, status);
     }
 
     @Transactional(readOnly = true)
     public List<EstimateEntity> findByCustomer(CustomerEntity customer, UserEntity user) {
-        return estimateRepository.findByCustomerAndUserOrderByIssueDateDescCreatedAtDesc(customer, user);
+        return estimateRepository.findByCustomerAndUserOrderByIssueDateDescCreatedAtDesc(
+                requireArgument(customer, "customer"),
+                requireArgument(user, "user")
+        );
     }
 
     @Transactional(readOnly = true)
     public Optional<EstimateEntity> findByIdAndUser(Long id, UserEntity user) {
-        return estimateRepository.findByIdAndUser(id, user);
+        return estimateRepository.findByIdAndUser(requireArgument(id, "estimate id"), requireArgument(user, "user"));
     }
 
     @Transactional(readOnly = true)
     public EstimateEntity findByIdForUser(Long id, UserEntity user) {
-        return findByIdAndUser(id, user).orElseThrow(() -> estimateNotFound());
+        Long requiredId = requireArgument(id, "estimate id");
+        UserEntity requiredUser = requireArgument(user, "user");
+        return findByIdAndUser(requiredId, requiredUser).orElseThrow(() -> estimateNotFound(requiredId, requiredUser));
     }
 
     @Transactional
     public EstimateEntity create(EstimateDTO dto, UserEntity user) {
-        assertQuotationNumberAvailable(dto.getQuotationNumber(), null, user);
+        EstimateDTO requiredDto = requireArgument(dto, "estimate");
+        UserEntity requiredUser = requireArgument(user, "user");
+        assertQuotationNumberAvailable(requiredDto.getQuotationNumber(), null, requiredUser);
         EstimateEntity estimate = new EstimateEntity();
-        estimate.setUser(user);
+        estimate.setUser(requiredUser);
         estimate.setStatus(EstimateStatus.DRAFT);
-        apply(estimate, dto, user);
-        return estimateRepository.save(estimate);
+        apply(estimate, requiredDto, requiredUser);
+        estimateRepository.save(estimate);
+        return estimate;
     }
 
     @Transactional
     public EstimateEntity update(Long id, EstimateDTO dto, UserEntity user) {
+        Long requiredId = requireArgument(id, "estimate id");
+        EstimateDTO requiredDto = requireArgument(dto, "estimate");
+        UserEntity requiredUser = requireArgument(user, "user");
         EstimateEntity estimate = Objects.requireNonNull(
-                estimateRepository.findByIdAndUser(id, user).orElseThrow(() -> estimateNotFound()),
+                estimateRepository.findByIdAndUser(requiredId, requiredUser).orElseThrow(() -> estimateNotFound(requiredId, requiredUser)),
                 "Estimate must not be null."
         );
-        assertQuotationNumberAvailable(dto.getQuotationNumber(), id, user);
-        apply(estimate, dto, user);
-        return Optional.ofNullable(estimateRepository.save(estimate))
-                .orElseThrow(() -> new IllegalStateException("Saved estimate must not be null."));
+        assertQuotationNumberAvailable(requiredDto.getQuotationNumber(), requiredId, requiredUser);
+        apply(estimate, requiredDto, requiredUser);
+        estimateRepository.save(estimate);
+        return estimate;
     }
 
     @Transactional
     public void delete(Long id, UserEntity user) {
-        estimateRepository.findByIdAndUser(id, user)
+        Long requiredId = requireArgument(id, "estimate id");
+        UserEntity requiredUser = requireArgument(user, "user");
+        estimateRepository.findByIdAndUser(requiredId, requiredUser)
                 .ifPresentOrElse(
                         estimateRepository::delete,
                         () -> {
-                            throw estimateNotFound();
+                            throw estimateNotFound(requiredId, requiredUser);
                         }
                 );
     }
@@ -105,34 +121,38 @@ public class EstimateService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Finalised estimates cannot be sent again.");
         }
         estimate.setStatus(EstimateStatus.SENT);
-        return estimateRepository.save(estimate);
+        estimateRepository.save(estimate);
+        return estimate;
     }
 
     @Transactional
     public EstimateEntity markAccepted(Long id, UserEntity user) {
         EstimateEntity estimate = findByIdForUser(id, user);
         estimate.setStatus(EstimateStatus.ACCEPTED);
-        return estimateRepository.save(estimate);
+        estimateRepository.save(estimate);
+        return estimate;
     }
 
     @Transactional
     public EstimateEntity markDeclined(Long id, UserEntity user) {
         EstimateEntity estimate = findByIdForUser(id, user);
         estimate.setStatus(EstimateStatus.DECLINED);
-        return estimateRepository.save(estimate);
+        estimateRepository.save(estimate);
+        return estimate;
     }
 
     public EstimateDTO toDTO(EstimateEntity estimate) {
+        EstimateEntity requiredEstimate = requireArgument(estimate, "estimate");
         EstimateDTO dto = new EstimateDTO();
-        dto.setId(estimate.getId());
-        dto.setCustomerId(estimate.getCustomer().getId());
-        dto.setQuotationNumber(estimate.getQuotationNumber());
-        dto.setStatus(estimate.getStatus());
-        dto.setIssueDate(estimate.getIssueDate());
-        dto.setExpiryDate(estimate.getExpiryDate());
-        dto.setNotes(estimate.getNotes());
+        dto.setId(requiredEstimate.getId());
+        dto.setCustomerId(requiredEstimate.getCustomer().getId());
+        dto.setQuotationNumber(requiredEstimate.getQuotationNumber());
+        dto.setStatus(requiredEstimate.getStatus());
+        dto.setIssueDate(requiredEstimate.getIssueDate());
+        dto.setExpiryDate(requiredEstimate.getExpiryDate());
+        dto.setNotes(requiredEstimate.getNotes());
 
-        for (EstimateLineItemEntity lineItem : estimate.getLineItems()) {
+        for (EstimateLineItemEntity lineItem : requiredEstimate.getLineItems()) {
             EstimateLineItemDTO lineItemDTO = new EstimateLineItemDTO();
             lineItemDTO.setItemName(lineItem.getItemName());
             lineItemDTO.setDescription(lineItem.getDescription());
@@ -151,6 +171,9 @@ public class EstimateService {
         }
         if (dto.getCustomerId() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Customer is required.");
+        }
+        if (dto.getIssueDate() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Issue date is required.");
         }
         validateDateOrder(dto);
 
@@ -171,23 +194,24 @@ public class EstimateService {
     }
 
     private EstimateLineItemEntity toLineItemEntity(EstimateLineItemDTO dto) {
+        EstimateLineItemDTO requiredDto = requireArgument(dto, "line item");
         EstimateLineItemEntity lineItem = new EstimateLineItemEntity();
-        lineItem.setItemName(trimRequired(dto.getItemName(), "Line item name"));
-        lineItem.setDescription(trim(dto.getDescription()));
-        BigDecimal quantity = dto.getQuantity();
+        lineItem.setItemName(trimRequired(requiredDto.getItemName(), "Line item name"));
+        lineItem.setDescription(trim(requiredDto.getDescription()));
+        BigDecimal quantity = requiredDto.getQuantity();
         if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Line item quantity must be greater than zero.");
         }
         lineItem.setQuantity(quantity);
-        BigDecimal unitPrice = dto.getUnitPrice();
-        if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Line item unit price must be greater than zero.");
+        BigDecimal unitPrice = requiredDto.getUnitPrice();
+        if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Line item unit price cannot be negative.");
         }
         lineItem.setUnitPrice(unitPrice);
-        if (dto.getTaxRate() == null) {
+        if (requiredDto.getTaxRate() == null) {
             throw new IllegalArgumentException("Line item tax rate is required.");
         }
-        lineItem.setTaxRate(dto.getTaxRate());
+        lineItem.setTaxRate(requiredDto.getTaxRate());
         return lineItem;
     }
 
@@ -199,6 +223,7 @@ public class EstimateService {
         estimateRepository.findByUserAndQuotationNumberIgnoreCase(user, normalised)
                 .filter(e -> currentEstimateId == null || !e.getId().equals(currentEstimateId))
                 .ifPresent(e -> {
+                    log.warn("Quotation number {} already exists for user {}", normalised, user.getEmail());
                     throw new IllegalArgumentException("Quotation number already exists.");
                 });
     }
@@ -209,7 +234,8 @@ public class EstimateService {
         }
     }
 
-    private ResponseStatusException estimateNotFound() {
+    private ResponseStatusException estimateNotFound(Long id, UserEntity user) {
+        log.warn("Estimate {} was not found for user {}", id, user.getEmail());
         return new ResponseStatusException(HttpStatus.NOT_FOUND, "Estimate not found.");
     }
 
@@ -229,5 +255,12 @@ public class EstimateService {
             throw new IllegalArgumentException(fieldName + " is required.");
         }
         return trimmed;
+    }
+
+    private <T> T requireArgument(T value, String fieldName) {
+        if (value == null) {
+            throw new IllegalArgumentException(fieldName + " is required.");
+        }
+        return value;
     }
 }

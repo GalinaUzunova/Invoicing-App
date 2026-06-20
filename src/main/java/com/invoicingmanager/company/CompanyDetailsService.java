@@ -9,6 +9,7 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -20,6 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
+@Slf4j
 public class CompanyDetailsService {
 
     private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(
@@ -42,22 +44,25 @@ public class CompanyDetailsService {
 
     @Transactional(readOnly = true)
     public CompanyDetailsEntity getForUser(UserEntity user) {
-        return companyDetailsRepository.findByUser(user).orElseGet(() -> createEmpty(user));
+        UserEntity requiredUser = requireArgument(user, "user");
+        return companyDetailsRepository.findByUser(requiredUser).orElseGet(() -> createEmpty(requiredUser));
     }
 
     @Transactional
     public CompanyDetailsEntity save(CompanyDetailsDTO dto, MultipartFile logo, UserEntity user) {
-        CompanyDetailsEntity company = companyDetailsRepository.findByUser(user)
-                .orElseGet(() -> createEmpty(user));
+        CompanyDetailsDTO requiredDto = requireArgument(dto, "company details");
+        UserEntity requiredUser = requireArgument(user, "user");
+        CompanyDetailsEntity company = companyDetailsRepository.findByUser(requiredUser)
+                .orElseGet(() -> createEmpty(requiredUser));
 
-        company.setCompanyName(trimRequired(dto.getCompanyName(), "Company name"));
-        company.setVatNumber(trim(dto.getVatNumber()));
-        company.setAddress(trim(dto.getAddress()));
-        company.setEmail(trimRequired(dto.getEmail(), "Company email"));
-        company.setPhone(trimRequired(dto.getPhone(), "Company phone"));
+        company.setCompanyName(trimRequired(requiredDto.getCompanyName(), "Company name"));
+        company.setVatNumber(trim(requiredDto.getVatNumber()));
+        company.setAddress(trim(requiredDto.getAddress()));
+        company.setEmail(trimRequired(requiredDto.getEmail(), "Company email"));
+        company.setPhone(trimRequired(requiredDto.getPhone(), "Company phone"));
 
         if (logo != null && !logo.isEmpty()) {
-            storeLogo(company, logo, user);
+            storeLogo(company, logo, requiredUser);
         }
 
         return companyDetailsRepository.save(company);
@@ -65,40 +70,43 @@ public class CompanyDetailsService {
 
     @Transactional
     public void removeLogo(UserEntity user) {
-        companyDetailsRepository.findByUser(user)
+        UserEntity requiredUser = requireArgument(user, "user");
+        companyDetailsRepository.findByUser(requiredUser)
                 .filter(CompanyDetailsEntity::hasLogo)
                 .ifPresent(company -> {
-                    deleteLogoFile(user, company.getLogoFilename());
+                    deleteLogoFile(requiredUser, company.getLogoFilename());
                     company.setLogoFilename(null);
                     companyDetailsRepository.save(company);
                 });
     }
 
     @Transactional(readOnly = true)
-    @SuppressWarnings("null")
     public Optional<Resource> getLogoResource(UserEntity user) {
-        return companyDetailsRepository.findByUser(user)
+        UserEntity requiredUser = requireArgument(user, "user");
+        return companyDetailsRepository.findByUser(requiredUser)
                 .filter(CompanyDetailsEntity::hasLogo)
-                .filter(company -> company.getLogoFilename() != null)
-                .map(company -> (Resource) new FileSystemResource(logoPath(user, company.getLogoFilename())))
+                .flatMap(company -> logoResource(requiredUser, company))
                 .filter(Resource::exists);
     }
 
     @Transactional(readOnly = true)
     public Optional<String> getLogoContentType(UserEntity user) {
-        return companyDetailsRepository.findByUser(user)
+        UserEntity requiredUser = requireArgument(user, "user");
+        return companyDetailsRepository.findByUser(requiredUser)
                 .filter(CompanyDetailsEntity::hasLogo)
-                .map(company -> contentTypeForFilename(company.getLogoFilename()));
+                .flatMap(company -> Optional.ofNullable(company.getLogoFilename()))
+                .map(this::contentTypeForFilename);
     }
 
     public CompanyDetailsDTO toDTO(CompanyDetailsEntity company) {
+        CompanyDetailsEntity requiredCompany = requireArgument(company, "company details");
         CompanyDetailsDTO dto = new CompanyDetailsDTO();
-        dto.setCompanyName(company.getCompanyName());
-        dto.setVatNumber(company.getVatNumber());
-        dto.setAddress(company.getAddress());
-        dto.setEmail(company.getEmail());
-        dto.setPhone(company.getPhone());
-        dto.setHasLogo(company.hasLogo());
+        dto.setCompanyName(requiredCompany.getCompanyName());
+        dto.setVatNumber(requiredCompany.getVatNumber());
+        dto.setAddress(requiredCompany.getAddress());
+        dto.setEmail(requiredCompany.getEmail());
+        dto.setPhone(requiredCompany.getPhone());
+        dto.setHasLogo(requiredCompany.hasLogo());
         return dto;
     }
 
@@ -131,6 +139,7 @@ public class CompanyDetailsService {
             Files.copy(logo.getInputStream(), destination, StandardCopyOption.REPLACE_EXISTING);
             company.setLogoFilename(filename);
         } catch (IOException exception) {
+            log.error("Unable to save company logo for user {}", user.getEmail(), exception);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Unable to save logo.", exception);
         }
     }
@@ -143,10 +152,22 @@ public class CompanyDetailsService {
         return logoDirectory(user).resolve(filename);
     }
 
+    private Optional<Resource> logoResource(UserEntity user, CompanyDetailsEntity company) {
+        return Optional.ofNullable(company.getLogoFilename())
+                .map(filename -> toLogoResource(user, filename));
+    }
+
+    private Resource toLogoResource(UserEntity user, String filename) {
+        Path path = Objects.requireNonNull(logoPath(user, filename), "logo path must not be null");
+        return new FileSystemResource(path);
+    }
+
     private void deleteLogoFile(UserEntity user, String filename) {
+        String requiredFilename = requireArgument(filename, "logo filename");
         try {
-            Files.deleteIfExists(logoPath(user, filename));
+            Files.deleteIfExists(logoPath(user, requiredFilename));
         } catch (IOException exception) {
+            log.error("Unable to delete company logo {} for user {}", requiredFilename, user.getEmail(), exception);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Unable to delete logo.", exception);
         }
     }
@@ -185,5 +206,12 @@ public class CompanyDetailsService {
             throw new IllegalArgumentException(fieldName + " is required.");
         }
         return trimmed;
+    }
+
+    private <T> T requireArgument(T value, String fieldName) {
+        if (value == null) {
+            throw new IllegalArgumentException(fieldName + " is required.");
+        }
+        return value;
     }
 }

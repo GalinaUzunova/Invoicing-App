@@ -8,6 +8,8 @@ import com.invoicingmanager.user.UserService;
 import jakarta.validation.Valid;
 import java.security.Principal;
 import java.util.Objects;
+import java.util.Optional;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -23,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
+@Slf4j
 @RequestMapping("/invoices")
 public class InvoiceController {
 
@@ -60,12 +63,11 @@ public class InvoiceController {
     public String createForm(@RequestParam(required = false) Long customerId, Model model, Principal principal) {
         UserEntity user = currentUser(principal);
         prepareFormModel(model, user, "New Invoice", "/invoices");
-        model.addAttribute("invoiceDTO", invoiceService.newInvoiceDTO(customerId));
+        model.addAttribute("invoiceDTO", invoiceService.newInvoiceDTO(customerId, user));
         return "invoices/form";
     }
 
     @PostMapping
-    @SuppressWarnings("null")
     public String create(
             @Valid @ModelAttribute InvoiceDTO invoiceDTO,
             BindingResult bindingResult,
@@ -83,7 +85,9 @@ public class InvoiceController {
             InvoiceEntity invoice = invoiceService.create(invoiceDTO, user);
             return "redirect:/invoices/" + invoice.getId();
         } catch (IllegalArgumentException exception) {
-            bindingResult.rejectValue("invoiceNumber", "invoiceNumber.duplicate", Objects.toString(exception.getMessage(), "Invalid invoice."));
+            String message = exceptionMessage(exception, "Invalid invoice.");
+            log.warn("Invoice creation failed for user {} and invoice number {}: {}", user.getEmail(), invoiceDTO.getInvoiceNumber(), message);
+            bindingResult.rejectValue("invoiceNumber", "invoiceNumber.duplicate", Objects.requireNonNull(message, "message must not be null"));
             prepareFormModel(model, user, "New Invoice", "/invoices");
             return "invoices/form";
         }
@@ -122,7 +126,6 @@ public class InvoiceController {
     }
 
     @PostMapping("/{id}")
-    @SuppressWarnings("null")
     public String update(
             @PathVariable Long id,
             @Valid @ModelAttribute InvoiceDTO invoiceDTO,
@@ -141,7 +144,9 @@ public class InvoiceController {
             invoiceService.update(id, invoiceDTO, user);
             return "redirect:/invoices/" + id;
         } catch (IllegalArgumentException exception) {
-            bindingResult.rejectValue("invoiceNumber", "invoiceNumber.duplicate", Objects.toString(exception.getMessage(), "Invalid invoice."));
+            String message = exceptionMessage(exception, "Invalid invoice.");
+            log.warn("Invoice update failed for user {}, invoice {}, and invoice number {}: {}", user.getEmail(), id, invoiceDTO.getInvoiceNumber(), message);
+            bindingResult.rejectValue("invoiceNumber", "invoiceNumber.duplicate", Objects.requireNonNull(message, "message must not be null"));
             prepareFormModel(model, user, "Edit Invoice", "/invoices/" + id);
             return "invoices/form";
         }
@@ -183,12 +188,14 @@ public class InvoiceController {
                 .orElse(null);
     }
 
-    @SuppressWarnings("null")
     private ResponseEntity<byte[]> pdfResponse(byte[] pdf, String filename) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(Objects.requireNonNull(MediaType.APPLICATION_PDF, "PDF media type must not be null"));
+        headers.setContentDisposition(ContentDisposition.attachment().filename(filename).build());
+
         return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_PDF)
-                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename(filename).build().toString())
-                .body(pdf);
+                .headers(headers)
+                .body(Objects.requireNonNull(pdf, "pdf must not be null"));
     }
 
     private String safeFilename(String value) {
@@ -196,5 +203,11 @@ public class InvoiceController {
             return "document";
         }
         return value.replaceAll("[^A-Za-z0-9._-]", "_");
+    }
+
+    private String exceptionMessage(RuntimeException exception, String fallback) {
+        return Optional.ofNullable(exception.getMessage())
+                .filter(message -> !message.isBlank())
+                .orElse(fallback);
     }
 }

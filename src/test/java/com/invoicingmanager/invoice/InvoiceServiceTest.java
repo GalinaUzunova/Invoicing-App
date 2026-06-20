@@ -2,21 +2,21 @@ package com.invoicingmanager.invoice;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.invoicingmanager.customer.CustomerEntity;
 import com.invoicingmanager.customer.CustomerRepository;
+import com.invoicingmanager.estimate.EstimateEntity;
+import com.invoicingmanager.estimate.EstimateLineItemEntity;
 import com.invoicingmanager.user.UserEntity;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.server.ResponseStatusException;
@@ -34,12 +34,27 @@ class InvoiceServiceTest {
 
     @Test
     void newInvoiceDTOInitializesDefaults() {
-        InvoiceDTO dto = service().newInvoiceDTO(9L);
+        UserEntity user = new UserEntity();
+
+        InvoiceDTO dto = service().newInvoiceDTO(9L, user);
 
         assertThat(dto.getCustomerId()).isEqualTo(9L);
-        assertThat(dto.getInvoiceNumber()).startsWith("INV-");
+        assertThat(dto.getInvoiceNumber()).isEqualTo("INV-00001");
         assertThat(dto.getIssueDate()).isEqualTo(LocalDate.now());
         assertThat(dto.getLineItems()).hasSize(1);
+    }
+
+    @Test
+    void newInvoiceDTOHandlesNullOptionalCustomerIdAndRejectsNullUser() {
+        UserEntity user = new UserEntity();
+
+        InvoiceDTO dto = service().newInvoiceDTO(null, user);
+
+        assertThat(dto.getCustomerId()).isNull();
+        assertThat(dto.getInvoiceNumber()).isEqualTo("INV-00001");
+        assertThatThrownBy(() -> service().newInvoiceDTO(9L, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("user is required");
     }
 
     @Test
@@ -67,6 +82,29 @@ class InvoiceServiceTest {
     }
 
     @Test
+    void findMethodsThrowExceptionWhenRequiredParametersAreNull() {
+        InvoiceService invoiceService = service();
+        UserEntity user = new UserEntity();
+        CustomerEntity customer = new CustomerEntity();
+
+        assertThatThrownBy(() -> invoiceService.findAllForUser(null, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("user is required");
+        assertThatThrownBy(() -> invoiceService.findByCustomer(null, user))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("customer is required");
+        assertThatThrownBy(() -> invoiceService.findByCustomer(customer, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("user is required");
+        assertThatThrownBy(() -> invoiceService.findByIdAndUser(null, user))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("invoice id is required");
+        assertThatThrownBy(() -> invoiceService.findByIdForUser(1L, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("user is required");
+    }
+
+    @Test
     void findByIdForUserReturnsInvoiceOrThrowsNotFound() {
         UserEntity user = new UserEntity();
         InvoiceEntity invoice = invoice(InvoiceStatus.DRAFT);
@@ -88,7 +126,6 @@ class InvoiceServiceTest {
         InvoiceDTO dto = invoiceDTO("INV-001");
         when(invoiceRepository.findByUserAndInvoiceNumberIgnoreCase(user, "INV-001")).thenReturn(Optional.empty());
         when(customerRepository.findByIdAndUser(5L, user)).thenReturn(Optional.of(customer));
-        when(invoiceRepository.save(any(InvoiceEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         InvoiceEntity saved = service().create(dto, user);
 
@@ -96,10 +133,70 @@ class InvoiceServiceTest {
         assertThat(saved.getCustomer()).isSameAs(customer);
         assertThat(saved.getStatus()).isEqualTo(InvoiceStatus.DRAFT);
         assertThat(saved.getGrandTotal()).isEqualByComparingTo("24.00");
+        assertThat(saved.getLineItems()).hasSize(1);
+    }
 
-        ArgumentCaptor<InvoiceEntity> captor = ArgumentCaptor.forClass(InvoiceEntity.class);
-        verify(invoiceRepository).save(captor.capture());
-        assertThat(captor.getValue().getLineItems()).hasSize(1);
+    @Test
+    void createThrowsExceptionWhenRequiredParametersAreNull() {
+        InvoiceDTO dto = invoiceDTO("INV-001");
+        UserEntity user = new UserEntity();
+
+        assertThatThrownBy(() -> service().create(null, user))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("invoice is required");
+        assertThatThrownBy(() -> service().create(dto, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("user is required");
+    }
+
+    @Test
+    void createFromEstimateCopiesCustomerDatesNotesAndLineItems() {
+        UserEntity user = new UserEntity();
+        CustomerEntity customer = customer(5L);
+        EstimateEntity estimate = new EstimateEntity();
+        estimate.setCustomer(customer);
+        estimate.setIssueDate(LocalDate.of(2026, 1, 1));
+        estimate.setExpiryDate(LocalDate.of(2026, 1, 15));
+        estimate.setNotes("Copied notes");
+        estimate.addLineItem(estimateLineItemEntity());
+
+        when(invoiceRepository.countByUser(user)).thenReturn(1L);
+        when(invoiceRepository.existsByUserAndInvoiceNumberIgnoreCase(user, "INV-00002")).thenReturn(false);
+        when(invoiceRepository.findByUserAndInvoiceNumberIgnoreCase(user, "INV-00002")).thenReturn(Optional.empty());
+        when(customerRepository.findByIdAndUser(5L, user)).thenReturn(Optional.of(customer));
+
+        InvoiceEntity invoice = service().createFromEstimate(estimate, user);
+
+        assertThat(invoice.getCustomer()).isSameAs(customer);
+        assertThat(invoice.getInvoiceNumber()).isEqualTo("INV-00002");
+        assertThat(invoice.getIssueDate()).isEqualTo(LocalDate.of(2026, 1, 1));
+        assertThat(invoice.getDueDate()).isEqualTo(LocalDate.of(2026, 1, 15));
+        assertThat(invoice.getNotes()).isEqualTo("Copied notes");
+        assertThat(invoice.getStatus()).isEqualTo(InvoiceStatus.DRAFT);
+        assertThat(invoice.getLineItems()).hasSize(1);
+        assertThat(invoice.getGrandTotal()).isEqualByComparingTo("24.00");
+    }
+
+    @Test
+    void createFromEstimateThrowsExceptionWhenRequiredParametersAreNull() {
+        EstimateEntity estimate = new EstimateEntity();
+        UserEntity user = new UserEntity();
+
+        assertThatThrownBy(() -> service().createFromEstimate(null, user))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("estimate is required");
+        assertThatThrownBy(() -> service().createFromEstimate(estimate, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("user is required");
+    }
+
+    @Test
+    void createFromEstimateRejectsMissingEstimateCustomer() {
+        EstimateEntity estimate = new EstimateEntity();
+
+        assertThatThrownBy(() -> service().createFromEstimate(estimate, new UserEntity()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("estimate customer is required");
     }
 
     @Test
@@ -112,7 +209,8 @@ class InvoiceServiceTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Invoice number already exists");
 
-        verify(invoiceRepository, never()).save(any());
+        assertThat(org.mockito.Mockito.mockingDetails(invoiceRepository).getInvocations())
+                .noneMatch(invocation -> "save".equals(invocation.getMethod().getName()));
     }
 
     @Test
@@ -124,12 +222,27 @@ class InvoiceServiceTest {
         when(invoiceRepository.findByIdAndUser(3L, user)).thenReturn(Optional.of(invoice));
         when(invoiceRepository.findByUserAndInvoiceNumberIgnoreCase(user, "INV-002")).thenReturn(Optional.empty());
         when(customerRepository.findByIdAndUser(5L, user)).thenReturn(Optional.of(customer));
-        when(invoiceRepository.save(invoice)).thenReturn(invoice);
 
         InvoiceEntity updated = service().update(3L, invoiceDTO("INV-002"), user);
 
         assertThat(updated.getInvoiceNumber()).isEqualTo("INV-002");
         assertThat(updated.getGrandTotal()).isEqualByComparingTo("24.00");
+    }
+
+    @Test
+    void updateThrowsExceptionWhenRequiredParametersAreNull() {
+        InvoiceDTO dto = invoiceDTO("INV-001");
+        UserEntity user = new UserEntity();
+
+        assertThatThrownBy(() -> service().update(null, dto, user))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("invoice id is required");
+        assertThatThrownBy(() -> service().update(3L, null, user))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("invoice is required");
+        assertThatThrownBy(() -> service().update(3L, dto, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("user is required");
     }
 
     @Test
@@ -140,7 +253,25 @@ class InvoiceServiceTest {
 
         service().delete(3L, user);
 
-        verify(invoiceRepository).delete(invoice);
+        verify(invoiceRepository).delete(Objects.requireNonNull(invoice, "invoice must not be null"));
+    }
+
+    @Test
+    void deleteAndStatusMethodsThrowExceptionWhenRequiredParametersAreNull() {
+        UserEntity user = new UserEntity();
+
+        assertThatThrownBy(() -> service().delete(null, user))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("invoice id is required");
+        assertThatThrownBy(() -> service().delete(3L, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("user is required");
+        assertThatThrownBy(() -> service().markSent(null, user))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("invoice id is required");
+        assertThatThrownBy(() -> service().markPaid(3L, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("user is required");
     }
 
     @Test
@@ -161,7 +292,6 @@ class InvoiceServiceTest {
         InvoiceEntity sent = invoice(InvoiceStatus.SENT);
         when(invoiceRepository.findByIdAndUser(1L, user)).thenReturn(Optional.of(draft));
         when(invoiceRepository.findByIdAndUser(2L, user)).thenReturn(Optional.of(sent));
-        when(invoiceRepository.save(any(InvoiceEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         assertThat(service().markSent(1L, user).getStatus()).isEqualTo(InvoiceStatus.SENT);
         assertThat(service().markPaid(2L, user).getStatus()).isEqualTo(InvoiceStatus.PAID);
@@ -187,6 +317,13 @@ class InvoiceServiceTest {
     }
 
     @Test
+    void toDTOThrowsExceptionWhenInvoiceIsNull() {
+        assertThatThrownBy(() -> service().toDTO(null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("invoice is required");
+    }
+
+    @Test
     void createRequiresCustomerAndLineItems() {
         UserEntity user = new UserEntity();
         InvoiceDTO dto = invoiceDTO("INV-001");
@@ -204,6 +341,13 @@ class InvoiceServiceTest {
         assertThatThrownBy(() -> service().create(noLines, user))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("At least one line item");
+
+        InvoiceDTO noIssueDate = invoiceDTO("INV-006");
+        noIssueDate.setIssueDate(null);
+        when(invoiceRepository.findByUserAndInvoiceNumberIgnoreCase(user, "INV-006")).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service().create(noIssueDate, user))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Issue date is required");
     }
 
     @Test
@@ -243,6 +387,59 @@ class InvoiceServiceTest {
         assertThatThrownBy(() -> service().create(dto, user))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Line item quantity must be greater than zero");
+    }
+
+    @Test
+    void createAllowsZeroUnitPrice() {
+        UserEntity user = new UserEntity();
+        InvoiceDTO dto = invoiceDTO("INV-008");
+        dto.getLineItems().get(0).setUnitPrice(BigDecimal.ZERO);
+        when(invoiceRepository.findByUserAndInvoiceNumberIgnoreCase(user, "INV-008")).thenReturn(Optional.empty());
+        when(customerRepository.findByIdAndUser(5L, user)).thenReturn(Optional.of(customer(5L)));
+
+        InvoiceEntity saved = service().create(dto, user);
+
+        assertThat(saved.getLineItems().get(0).getUnitPrice()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(saved.getGrandTotal()).isEqualByComparingTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    void createRejectsNegativeUnitPrice() {
+        UserEntity user = new UserEntity();
+        InvoiceDTO dto = invoiceDTO("INV-009");
+        dto.getLineItems().get(0).setUnitPrice(new BigDecimal("-0.01"));
+        when(invoiceRepository.findByUserAndInvoiceNumberIgnoreCase(user, "INV-009")).thenReturn(Optional.empty());
+        when(customerRepository.findByIdAndUser(5L, user)).thenReturn(Optional.of(customer(5L)));
+
+        assertThatThrownBy(() -> service().create(dto, user))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Line item unit price cannot be negative");
+    }
+
+    @Test
+    void createRejectsNullUnitPrice() {
+        UserEntity user = new UserEntity();
+        InvoiceDTO dto = invoiceDTO("INV-010");
+        dto.getLineItems().get(0).setUnitPrice(null);
+        when(invoiceRepository.findByUserAndInvoiceNumberIgnoreCase(user, "INV-010")).thenReturn(Optional.empty());
+        when(customerRepository.findByIdAndUser(5L, user)).thenReturn(Optional.of(customer(5L)));
+
+        assertThatThrownBy(() -> service().create(dto, user))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Line item unit price cannot be negative");
+    }
+
+    @Test
+    void createRejectsNullLineItemEntry() {
+        UserEntity user = new UserEntity();
+        InvoiceDTO dto = invoiceDTO("INV-007");
+        dto.getLineItems().add(null);
+        when(invoiceRepository.findByUserAndInvoiceNumberIgnoreCase(user, "INV-007")).thenReturn(Optional.empty());
+        when(customerRepository.findByIdAndUser(5L, user)).thenReturn(Optional.of(customer(5L)));
+
+        assertThatThrownBy(() -> service().create(dto, user))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("line item is required");
     }
 
     private InvoiceService service() {
@@ -292,6 +489,16 @@ class InvoiceServiceTest {
     private InvoiceLineItemEntity lineItemDTOEntity() {
         InvoiceLineItemEntity lineItem = new InvoiceLineItemEntity();
         lineItem.setItemName("Service");
+        lineItem.setQuantity(new BigDecimal("2.00"));
+        lineItem.setUnitPrice(new BigDecimal("10.00"));
+        lineItem.setTaxRate(new BigDecimal("20.00"));
+        return lineItem;
+    }
+
+    private EstimateLineItemEntity estimateLineItemEntity() {
+        EstimateLineItemEntity lineItem = new EstimateLineItemEntity();
+        lineItem.setItemName("Service");
+        lineItem.setDescription("Repair");
         lineItem.setQuantity(new BigDecimal("2.00"));
         lineItem.setUnitPrice(new BigDecimal("10.00"));
         lineItem.setTaxRate(new BigDecimal("20.00"));

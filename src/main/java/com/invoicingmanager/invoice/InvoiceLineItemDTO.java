@@ -26,7 +26,7 @@ public class InvoiceLineItemDTO {
     private BigDecimal quantity = BigDecimal.ONE;
 
     @NotNull
-    @DecimalMin(value = "0.01", message = "Unit price must be greater than zero")
+    @DecimalMin(value = "0.00", message = "Unit price cannot be negative")
     @Digits(integer = 10, fraction = 2)
     private BigDecimal unitPrice = BigDecimal.ZERO;
 

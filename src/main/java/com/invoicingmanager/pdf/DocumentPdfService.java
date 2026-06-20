@@ -11,12 +11,14 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
 @Service
+@Slf4j
 public class DocumentPdfService {
 
     private static final Set<String> PDF_LOGO_CONTENT_TYPES = Set.of(
@@ -32,17 +34,21 @@ public class DocumentPdfService {
     }
 
     public byte[] generateInvoicePdf(InvoiceEntity invoice, CompanyDetailsEntity company, String logoDataUri) {
+        InvoiceEntity requiredInvoice = requireArgument(invoice, "invoice");
+        CompanyDetailsEntity requiredCompany = requireArgument(company, "company details");
         Context context = new Context();
-        context.setVariable("invoice", invoice);
-        context.setVariable("company", company);
+        context.setVariable("invoice", requiredInvoice);
+        context.setVariable("company", requiredCompany);
         context.setVariable("logoDataUri", logoDataUri);
         return render("pdf/invoice", context);
     }
 
     public byte[] generateEstimatePdf(EstimateEntity estimate, CompanyDetailsEntity company, String logoDataUri) {
+        EstimateEntity requiredEstimate = requireArgument(estimate, "estimate");
+        CompanyDetailsEntity requiredCompany = requireArgument(company, "company details");
         Context context = new Context();
-        context.setVariable("estimate", estimate);
-        context.setVariable("company", company);
+        context.setVariable("estimate", requiredEstimate);
+        context.setVariable("company", requiredCompany);
         context.setVariable("logoDataUri", logoDataUri);
         return render("pdf/estimate", context);
     }
@@ -53,9 +59,10 @@ public class DocumentPdfService {
         }
 
         try {
-            byte[] bytes = resource.getInputStream().readAllBytes();
+            byte[] bytes = requireArgument(resource, "logo resource").getInputStream().readAllBytes();
             return Optional.of("data:" + contentType + ";base64," + Base64.getEncoder().encodeToString(bytes));
         } catch (IOException exception) {
+            log.warn("Unable to read PDF logo resource with content type {}", contentType, exception);
             return Optional.empty();
         }
     }
@@ -70,7 +77,15 @@ public class DocumentPdfService {
             builder.run();
             return outputStream.toByteArray();
         } catch (IOException exception) {
+            log.error("Unable to generate PDF document from template {}", templateName, exception);
             throw new IllegalStateException("Unable to generate PDF document.", exception);
         }
+    }
+
+    private <T> T requireArgument(T value, String fieldName) {
+        if (value == null) {
+            throw new IllegalArgumentException(fieldName + " is required.");
+        }
+        return value;
     }
 }

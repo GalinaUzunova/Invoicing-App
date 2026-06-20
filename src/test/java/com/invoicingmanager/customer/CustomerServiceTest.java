@@ -2,18 +2,19 @@ package com.invoicingmanager.customer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.invoicingmanager.user.UserEntity;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.invocation.Invocation;
 import org.springframework.web.server.ResponseStatusException;
 
 @ExtendWith(MockitoExtension.class)
@@ -60,7 +61,6 @@ class CustomerServiceTest {
     void createTrimsFieldsAndSavesCustomerForUser() {
         UserEntity user = new UserEntity();
         CustomerDTO dto = customerDTO();
-        when(customerRepository.save(any(CustomerEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         CustomerService customerService = new CustomerService(customerRepository);
         CustomerEntity saved = customerService.create(dto, user);
@@ -69,9 +69,47 @@ class CustomerServiceTest {
         assertThat(saved.getName()).isEqualTo("Acme Ltd");
         assertThat(saved.getEmail()).isEqualTo("billing@acme.test");
 
-        ArgumentCaptor<CustomerEntity> captor = ArgumentCaptor.forClass(CustomerEntity.class);
-        verify(customerRepository).save(captor.capture());
-        assertThat(captor.getValue().getPhone()).isEqualTo("+441234");
+        assertThat(savedCustomer().getPhone()).isEqualTo("+441234");
+    }
+
+    @Test
+    void createThrowsExceptionWhenDtoIsNull() {
+        UserEntity user = new UserEntity();
+
+        assertThatThrownBy(() -> new CustomerService(customerRepository).create(null, user))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("customer is required");
+    }
+
+    @Test
+    void createThrowsExceptionWhenUserIsNull() {
+        CustomerDTO dto = customerDTO();
+
+        assertThatThrownBy(() -> new CustomerService(customerRepository).create(dto, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("user is required");
+    }
+
+    @Test
+    void createTrimsRequiredFieldsAndPreservesNullOptionalDtoFields() {
+        UserEntity user = new UserEntity();
+        CustomerDTO dto = customerDTO();
+        dto.setBillingAddress(null);
+        dto.setCity(null);
+        dto.setCountry(null);
+        dto.setTaxNumber(null);
+        dto.setNotes(null);
+
+        CustomerEntity saved = new CustomerService(customerRepository).create(dto, user);
+
+        assertThat(saved.getName()).isEqualTo("Acme Ltd");
+        assertThat(saved.getEmail()).isEqualTo("billing@acme.test");
+        assertThat(saved.getPhone()).isEqualTo("+441234");
+        assertThat(saved.getBillingAddress()).isNull();
+        assertThat(saved.getCity()).isNull();
+        assertThat(saved.getCountry()).isNull();
+        assertThat(saved.getTaxNumber()).isNull();
+        assertThat(saved.getNotes()).isNull();
     }
 
     @Test
@@ -79,13 +117,29 @@ class CustomerServiceTest {
         UserEntity user = new UserEntity();
         CustomerEntity customer = customer("Old Name");
         when(customerRepository.findByIdAndUser(7L, user)).thenReturn(Optional.of(customer));
-        when(customerRepository.save(customer)).thenReturn(customer);
 
         CustomerService customerService = new CustomerService(customerRepository);
         CustomerEntity updated = customerService.update(7L, customerDTO(), user);
 
         assertThat(updated.getName()).isEqualTo("Acme Ltd");
         assertThat(updated.getBillingAddress()).isEqualTo("1 Main Street");
+    }
+
+    @Test
+    void updateThrowsExceptionWhenRequiredParametersAreNull() {
+        CustomerService customerService = new CustomerService(customerRepository);
+        UserEntity user = new UserEntity();
+        CustomerDTO dto = customerDTO();
+
+        assertThatThrownBy(() -> customerService.update(null, dto, user))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("customer id is required");
+        assertThatThrownBy(() -> customerService.update(7L, null, user))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("customer is required");
+        assertThatThrownBy(() -> customerService.update(7L, dto, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("user is required");
     }
 
     @Test
@@ -97,7 +151,26 @@ class CustomerServiceTest {
         CustomerService customerService = new CustomerService(customerRepository);
         customerService.delete(7L, user);
 
-        verify(customerRepository).delete(customer);
+        verify(customerRepository).delete(Objects.requireNonNull(customer, "customer must not be null"));
+    }
+
+    @Test
+    void lookupAndDeleteMethodsThrowExceptionWhenRequiredParametersAreNull() {
+        CustomerService customerService = new CustomerService(customerRepository);
+        UserEntity user = new UserEntity();
+
+        assertThatThrownBy(() -> customerService.findAllForUser(null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("user is required");
+        assertThatThrownBy(() -> customerService.findByIdForUser(null, user))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("customer id is required");
+        assertThatThrownBy(() -> customerService.findByIdAndUser(7L, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("user is required");
+        assertThatThrownBy(() -> customerService.delete(null, user))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("customer id is required");
     }
 
     @Test
@@ -118,6 +191,13 @@ class CustomerServiceTest {
         assertThat(dto.getId()).isEqualTo(5L);
         assertThat(dto.getName()).isEqualTo("Acme Ltd");
         assertThat(dto.getTaxNumber()).isEqualTo("GB123");
+    }
+
+    @Test
+    void toDTOThrowsExceptionWhenCustomerIsNull() {
+        assertThatThrownBy(() -> new CustomerService(customerRepository).toDTO(null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("customer is required");
     }
 
     @Test
@@ -156,5 +236,19 @@ class CustomerServiceTest {
         dto.setTaxNumber(" GB123 ");
         dto.setNotes(" Important ");
         return dto;
+    }
+
+    private CustomerEntity savedCustomer() {
+        return mockingDetails(customerRepository).getInvocations().stream()
+                .filter(invocation -> "save".equals(invocation.getMethod().getName()))
+                .findFirst()
+                .map(this::customerArgument)
+                .orElseThrow(() -> new AssertionError("Expected customer to be saved."));
+    }
+
+    private CustomerEntity customerArgument(Invocation invocation) {
+        Object argument = invocation.getArgument(0);
+        assertThat(argument).isInstanceOf(CustomerEntity.class);
+        return (CustomerEntity) Objects.requireNonNull(argument, "saved customer must not be null");
     }
 }

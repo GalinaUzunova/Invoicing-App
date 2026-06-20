@@ -1,6 +1,7 @@
 package com.invoicingmanager.pdf;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.invoicingmanager.company.CompanyDetailsEntity;
 import com.invoicingmanager.customer.CustomerEntity;
@@ -12,6 +13,7 @@ import com.invoicingmanager.invoice.InvoiceLineItemEntity;
 import com.invoicingmanager.invoice.InvoiceStatus;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -39,17 +41,51 @@ class DocumentPdfServiceTest {
     }
 
     @Test
-    @SuppressWarnings("null")
+    void generatePdfMethodsRejectNullRequiredParameters() {
+        assertThatThrownBy(() -> documentPdfService.generateInvoicePdf(null, company(), null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("invoice is required");
+        assertThatThrownBy(() -> documentPdfService.generateInvoicePdf(invoice(), null, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("company details is required");
+        assertThatThrownBy(() -> documentPdfService.generateEstimatePdf(null, company(), null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("estimate is required");
+        assertThatThrownBy(() -> documentPdfService.generateEstimatePdf(estimate(), null, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("company details is required");
+    }
+
+    @Test
     void skipsUnsupportedPdfLogoTypes() {
-        assertThat(documentPdfService.toPdfLogoDataUri(new ByteArrayResource("webp".getBytes()), "image/webp"))
+        assertThat(documentPdfService.toPdfLogoDataUri(testLogoResource("webp"), "image/webp"))
                 .isEmpty();
     }
 
     @Test
-    @SuppressWarnings("null")
+    void skipsNullPdfLogoContentTypeBeforeReadingResource() {
+        assertThat(documentPdfService.toPdfLogoDataUri(null, null))
+                .isEmpty();
+    }
+
+    @Test
+    void rejectsNullPdfLogoResourceForSupportedContentType() {
+        assertThatThrownBy(() -> documentPdfService.toPdfLogoDataUri(null, MediaType.IMAGE_PNG_VALUE))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("logo resource is required");
+    }
+
+    @Test
     void convertsSupportedLogoToDataUri() {
-        assertThat(documentPdfService.toPdfLogoDataUri(new ByteArrayResource("png".getBytes()), MediaType.IMAGE_PNG_VALUE))
+        assertThat(documentPdfService.toPdfLogoDataUri(
+                testLogoResource("png"),
+                Objects.requireNonNull(MediaType.IMAGE_PNG_VALUE, "PNG media type must not be null")
+        ))
                 .hasValueSatisfying(value -> assertThat(value).startsWith("data:image/png;base64,"));
+    }
+
+    private ByteArrayResource testLogoResource(String content) {
+        return new ByteArrayResource(Objects.requireNonNull(content.getBytes(), "logo bytes must not be null"));
     }
 
     private InvoiceEntity invoice() {

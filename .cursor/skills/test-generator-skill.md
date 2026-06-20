@@ -16,6 +16,7 @@ Generate reliable tests for the Invoicing Manager Spring Boot application. Prior
 - Use JUnit 5, AssertJ, and Mockito.
 - Use `@ExtendWith(MockitoExtension.class)` for service unit tests.
 - Mock repositories and external collaborators. Do not start Spring for pure service tests.
+- Keep tests null-safe. Do not hide nullable Mockito matcher or captor placeholders behind broad stubs. Prefer explicit non-null fixtures, `Optional` assertions, and inspecting recorded invocations when matcher/captor APIs would introduce null-safety warnings.
 - Test both happy path and failure path for every service method:
   - successful create/update/delete flows
   - not-found behavior from repository `Optional.empty()`
@@ -61,6 +62,8 @@ Generate reliable tests for the Invoicing Manager Spring Boot application. Prior
 
 - Do not test Lombok-generated getters/setters directly.
 - Do not mock the class under test.
+- Do not use `@SuppressWarnings("null")` or leave IDE null-safety warnings in generated tests.
+- Do not use broad `any(...)` stubbing or `ArgumentCaptor.capture()` when it creates null-safety warnings; use safer assertions or explicit helper methods.
 - Do not assert exact generated UUID values; assert the expected prefix/pattern.
 - Do not hide or remove server validation errors.
 - Do not alter user-facing empty-state messages for invoices or estimates.

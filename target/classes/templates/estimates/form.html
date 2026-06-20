@@ -98,7 +98,7 @@
                             <div class="field-error" th:errors="*{lineItems[__${stat.index}__].quantity}"></div>
                         </td>
                         <td>
-                            <input class="form-control form-control-sm" type="number" step="0.01" min="0.01"
+                            <input class="form-control form-control-sm" type="number" step="0.01" min="0"
                                    th:field="*{lineItems[__${stat.index}__].unitPrice}" data-unit-price required>
                             <div class="field-error" th:errors="*{lineItems[__${stat.index}__].unitPrice}"></div>
                         </td>
@@ -144,7 +144,7 @@
             <td><input class="form-control form-control-sm" name="lineItems[__index__].itemName" required></td>
             <td><input class="form-control form-control-sm" name="lineItems[__index__].description"></td>
             <td><input class="form-control form-control-sm" type="number" step="0.01" min="0.01" name="lineItems[__index__].quantity" value="1.00" data-quantity required></td>
-            <td><input class="form-control form-control-sm" type="number" step="0.01" min="0.01" name="lineItems[__index__].unitPrice" value="" data-unit-price required></td>
+            <td><input class="form-control form-control-sm" type="number" step="0.01" min="0" name="lineItems[__index__].unitPrice" value="" data-unit-price required></td>
             <td><input class="form-control form-control-sm" type="number" step="0.01" min="0" name="lineItems[__index__].taxRate" value="0.00" data-tax-rate required></td>
             <td class="text-end fw-medium" data-line-preview>0.00</td>
             <td><button class="btn btn-outline-danger btn-sm" type="button" data-remove-line-item><i class="bi bi-trash"></i></button></td>

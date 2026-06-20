@@ -1,6 +1,9 @@
 package com.invoicingmanager.user;
 
 import jakarta.validation.Valid;
+import java.util.Objects;
+import java.util.Optional;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -9,6 +12,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 
 @Controller
+@Slf4j
 public class AuthController {
 
     private final UserService userService;
@@ -45,10 +49,18 @@ public class AuthController {
         try {
             userService.register(registerUserDTO);
         } catch (IllegalArgumentException exception) {
-            bindingResult.rejectValue("email", "email.duplicate", exception.getMessage());
+            String message = exceptionMessage(exception, "Unable to create account.");
+            log.warn("Registration failed for email {}: {}", registerUserDTO.getEmail(), message);
+            bindingResult.rejectValue("email", "email.duplicate", Objects.requireNonNull(message, "message must not be null"));
             return "auth/register";
         }
 
         return "redirect:/login?registered";
+    }
+
+    private String exceptionMessage(RuntimeException exception, String fallback) {
+        return Optional.ofNullable(exception.getMessage())
+                .filter(message -> !message.isBlank())
+                .orElse(fallback);
     }
 }

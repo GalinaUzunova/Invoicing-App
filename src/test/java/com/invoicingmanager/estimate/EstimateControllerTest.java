@@ -19,6 +19,8 @@ import com.invoicingmanager.company.CompanyDetailsEntity;
 import com.invoicingmanager.company.CompanyDetailsService;
 import com.invoicingmanager.customer.CustomerEntity;
 import com.invoicingmanager.customer.CustomerService;
+import com.invoicingmanager.invoice.InvoiceEntity;
+import com.invoicingmanager.invoice.InvoiceService;
 import com.invoicingmanager.pdf.DocumentPdfService;
 import com.invoicingmanager.security.SecurityConfig;
 import com.invoicingmanager.user.UserEntity;
@@ -44,6 +46,9 @@ class EstimateControllerTest {
 
     @MockitoBean
     private EstimateService estimateService;
+
+    @MockitoBean
+    private InvoiceService invoiceService;
 
     @MockitoBean
     private CustomerService customerService;
@@ -186,5 +191,23 @@ class EstimateControllerTest {
         mockMvc.perform(post("/estimates/1/accepted").with(csrf()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/estimates/1"));
+    }
+
+    @Test
+    @WithMockUser(username = "owner@example.com")
+    void copyEstimateToInvoiceRedirectsToNewInvoice() throws Exception {
+        UserEntity user = new UserEntity();
+        EstimateEntity estimate = new EstimateEntity();
+        estimate.setId(1L);
+        InvoiceEntity invoice = new InvoiceEntity();
+        invoice.setId(9L);
+
+        when(userService.getCurrentUser("owner@example.com")).thenReturn(user);
+        when(estimateService.findByIdForUser(1L, user)).thenReturn(estimate);
+        when(invoiceService.createFromEstimate(estimate, user)).thenReturn(invoice);
+
+        mockMvc.perform(post("/estimates/1/copy-to-invoice").with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/invoices/9"));
     }
 }

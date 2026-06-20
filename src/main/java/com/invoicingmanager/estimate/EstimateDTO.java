@@ -28,6 +28,7 @@ public class EstimateDTO {
     private EstimateStatus status = EstimateStatus.DRAFT;
 
     @NotNull
+    @FutureOrPresent(message = "Issue date cannot be in the past")
     private LocalDate issueDate = LocalDate.now();
 
     @FutureOrPresent(message = "Expiry date cannot be in the past")
@@ -37,6 +38,7 @@ public class EstimateDTO {
     private String notes;
 
     @Valid
+    @NotNull
     @Size(min = 1, message = "At least one line item is required")
     private List<EstimateLineItemDTO> lineItems = new ArrayList<>();
 

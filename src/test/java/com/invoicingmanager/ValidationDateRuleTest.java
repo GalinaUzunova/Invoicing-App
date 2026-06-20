@@ -18,6 +18,22 @@ class ValidationDateRuleTest {
     private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
 
     @Test
+    void invoiceDTORejectsIssueDateBeforeToday() {
+        InvoiceDTO dto = new InvoiceDTO();
+        dto.setCustomerId(1L);
+        dto.setInvoiceNumber("INV-001");
+        dto.setIssueDate(LocalDate.now().minusDays(1));
+
+        Set<ConstraintViolation<InvoiceDTO>> violations = validator.validate(dto);
+
+        assertThat(violations)
+                .anySatisfy(violation -> {
+                    assertThat(violation.getPropertyPath().toString()).isEqualTo("issueDate");
+                    assertThat(violation.getMessage()).isEqualTo("Issue date cannot be in the past");
+                });
+    }
+
+    @Test
     void invoiceDTORejectsDueDateBeforeIssueDate() {
         InvoiceDTO dto = new InvoiceDTO();
         dto.setCustomerId(1L);
@@ -31,6 +47,22 @@ class ValidationDateRuleTest {
                 .anySatisfy(violation -> {
                     assertThat(violation.getPropertyPath().toString()).isEqualTo("dueDateOnOrAfterIssueDate");
                     assertThat(violation.getMessage()).isEqualTo("Due date cannot be earlier than issue date");
+                });
+    }
+
+    @Test
+    void estimateDTORejectsIssueDateBeforeToday() {
+        EstimateDTO dto = new EstimateDTO();
+        dto.setCustomerId(1L);
+        dto.setQuotationNumber("QUO-001");
+        dto.setIssueDate(LocalDate.now().minusDays(1));
+
+        Set<ConstraintViolation<EstimateDTO>> violations = validator.validate(dto);
+
+        assertThat(violations)
+                .anySatisfy(violation -> {
+                    assertThat(violation.getPropertyPath().toString()).isEqualTo("issueDate");
+                    assertThat(violation.getMessage()).isEqualTo("Issue date cannot be in the past");
                 });
     }
 

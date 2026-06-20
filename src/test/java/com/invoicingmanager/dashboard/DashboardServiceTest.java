@@ -1,6 +1,7 @@
 package com.invoicingmanager.dashboard;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 import com.invoicingmanager.invoice.InvoiceEntity;
@@ -48,5 +49,17 @@ class DashboardServiceTest {
         DashboardService dashboardService = new DashboardService(invoiceRepository);
 
         assertThat(dashboardService.getRecentInvoices(user)).containsExactly(invoice);
+    }
+
+    @Test
+    void publicMethodsThrowExceptionWhenUserIsNull() {
+        DashboardService dashboardService = new DashboardService(invoiceRepository);
+
+        assertThatThrownBy(() -> dashboardService.getSummary(null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("user is required");
+        assertThatThrownBy(() -> dashboardService.getRecentInvoices(null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("user is required");
     }
 }

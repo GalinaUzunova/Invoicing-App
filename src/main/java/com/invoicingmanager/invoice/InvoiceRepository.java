@@ -30,6 +30,8 @@ public interface InvoiceRepository extends JpaRepository<InvoiceEntity, Long> {
 
     boolean existsByUserAndInvoiceNumberIgnoreCase(UserEntity user, String invoiceNumber);
 
+    long countByUser(UserEntity user);
+
     @Query("""
             select coalesce(sum(invoice.grandTotal), 0)
             from InvoiceEntity invoice

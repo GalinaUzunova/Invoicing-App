@@ -3,16 +3,18 @@ package com.invoicingmanager.user;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.Objects;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.invocation.Invocation;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -30,7 +32,6 @@ class UserServiceTest {
         RegisterUserDTO registerUserDTO = registerUserDTO();
         when(userRepository.existsByEmailIgnoreCase("owner@example.com")).thenReturn(false);
         when(passwordEncoder.encode("password123")).thenReturn("hashed-password");
-        when(userRepository.save(any(UserEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         UserService userService = new UserService(userRepository, passwordEncoder);
         UserEntity user = userService.register(registerUserDTO);
@@ -40,9 +41,7 @@ class UserServiceTest {
         assertThat(user.getRole()).isEqualTo("ROLE_USER");
         assertThat(user.isEnabled()).isTrue();
 
-        ArgumentCaptor<UserEntity> userCaptor = ArgumentCaptor.forClass(UserEntity.class);
-        verify(userRepository).save(userCaptor.capture());
-        assertThat(userCaptor.getValue().getPasswordHash()).isEqualTo("hashed-password");
+        assertThat(savedUser().getPasswordHash()).isEqualTo("hashed-password");
     }
 
     @Test
@@ -57,7 +56,8 @@ class UserServiceTest {
                 .hasMessageContaining("email already exists");
 
         verify(passwordEncoder, never()).encode(any());
-        verify(userRepository, never()).save(any());
+        assertThat(mockingDetails(userRepository).getInvocations())
+                .noneMatch(invocation -> "save".equals(invocation.getMethod().getName()));
     }
 
     @Test
@@ -90,8 +90,20 @@ class UserServiceTest {
         UserService userService = new UserService(userRepository, passwordEncoder);
 
         assertThatThrownBy(() -> userService.register(null))
-                .isInstanceOf(NullPointerException.class)
-                .hasMessageContaining("registerUserDTO");
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("register user is required");
+    }
+
+    @Test
+    void registerRejectsNullRequiredEmailBeforeRepositoryLookup() {
+        RegisterUserDTO registerUserDTO = registerUserDTO();
+        registerUserDTO.setEmail(null);
+
+        assertThatThrownBy(() -> new UserService(userRepository, passwordEncoder).register(registerUserDTO))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("email is required");
+
+        assertThat(org.mockito.Mockito.mockingDetails(userRepository).getInvocations()).isEmpty();
     }
 
     private RegisterUserDTO registerUserDTO() {
@@ -102,5 +114,19 @@ class UserServiceTest {
         registerUserDTO.setPassword("password123");
         registerUserDTO.setConfirmPassword("password123");
         return registerUserDTO;
+    }
+
+    private UserEntity savedUser() {
+        return mockingDetails(userRepository).getInvocations().stream()
+                .filter(invocation -> "save".equals(invocation.getMethod().getName()))
+                .findFirst()
+                .map(this::userArgument)
+                .orElseThrow(() -> new AssertionError("Expected user to be saved."));
+    }
+
+    private UserEntity userArgument(Invocation invocation) {
+        Object argument = invocation.getArgument(0);
+        assertThat(argument).isInstanceOf(UserEntity.class);
+        return (UserEntity) Objects.requireNonNull(argument, "saved user must not be null");
     }
 }

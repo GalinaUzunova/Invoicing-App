@@ -28,6 +28,7 @@ public class InvoiceDTO {
     private InvoiceStatus status = InvoiceStatus.DRAFT;
 
     @NotNull
+    @FutureOrPresent(message = "Issue date cannot be in the past")
     private LocalDate issueDate = LocalDate.now();
 
     @FutureOrPresent(message = "Due date cannot be in the past")
@@ -37,6 +38,7 @@ public class InvoiceDTO {
     private String notes;
 
     @Valid
+    @NotNull
     @Size(min = 1, message = "At least one line item is required")
     private List<InvoiceLineItemDTO> lineItems = new ArrayList<>();
 

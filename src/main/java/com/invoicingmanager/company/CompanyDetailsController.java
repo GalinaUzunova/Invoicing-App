@@ -5,6 +5,8 @@ import com.invoicingmanager.user.UserService;
 import jakarta.validation.Valid;
 import java.security.Principal;
 import java.util.Objects;
+import java.util.Optional;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -21,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
+@Slf4j
 @RequestMapping("/company")
 public class CompanyDetailsController {
 
@@ -60,7 +63,9 @@ public class CompanyDetailsController {
             redirectAttributes.addFlashAttribute("saved", true);
             return "redirect:/company";
         } catch (IllegalArgumentException exception) {
-            bindingResult.reject("logo.invalid", exception.getMessage());
+            String message = exceptionMessage(exception, "Invalid company details.");
+            log.warn("Company details update failed for user {}: {}", user.getEmail(), message);
+            bindingResult.reject("logo.invalid", Objects.requireNonNull(message, "message must not be null"));
             return "company/form";
         }
     }
@@ -77,9 +82,7 @@ public class CompanyDetailsController {
         UserEntity user = currentUser(principal);
         return companyDetailsService.getLogoResource(user)
                 .map(resource -> ResponseEntity.ok()
-                        .contentType(MediaType.parseMediaType(
-                                companyDetailsService.getLogoContentType(user).orElse(MediaType.IMAGE_PNG_VALUE)
-                        ))
+                        .contentType(Objects.requireNonNull(logoContentType(user), "logo media type must not be null"))
                         .header(HttpHeaders.CACHE_CONTROL, "private, max-age=3600")
                         .body(resource))
                 .orElse(ResponseEntity.notFound().build());
@@ -87,5 +90,17 @@ public class CompanyDetailsController {
 
     private UserEntity currentUser(Principal principal) {
         return userService.getCurrentUser(Objects.requireNonNull(principal, "principal must not be null").getName());
+    }
+
+    private MediaType logoContentType(UserEntity user) {
+        String contentType = companyDetailsService.getLogoContentType(user)
+                .orElse(Objects.requireNonNull(MediaType.IMAGE_PNG_VALUE, "PNG media type must not be null"));
+        return MediaType.parseMediaType(Objects.requireNonNull(contentType, "logo content type must not be null"));
+    }
+
+    private String exceptionMessage(RuntimeException exception, String fallback) {
+        return Optional.ofNullable(exception.getMessage())
+                .filter(message -> !message.isBlank())
+                .orElse(fallback);
     }
 }

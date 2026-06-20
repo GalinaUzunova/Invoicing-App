@@ -21,10 +21,11 @@ public class DashboardService {
 
     @Transactional(readOnly = true)
     public DashboardSummaryDTO getSummary(UserEntity user) {
-        BigDecimal totalRevenue = invoiceRepository.sumGrandTotalByUserAndStatus(user, InvoiceStatus.PAID);
-        BigDecimal pendingInvoiceAmount = invoiceRepository.sumGrandTotalByUserAndStatus(user, InvoiceStatus.SENT);
-        long pendingInvoiceCount = invoiceRepository.countByUserAndStatus(user, InvoiceStatus.SENT);
-        long draftInvoiceCount = invoiceRepository.countByUserAndStatus(user, InvoiceStatus.DRAFT);
+        UserEntity requiredUser = requireArgument(user, "user");
+        BigDecimal totalRevenue = invoiceRepository.sumGrandTotalByUserAndStatus(requiredUser, InvoiceStatus.PAID);
+        BigDecimal pendingInvoiceAmount = invoiceRepository.sumGrandTotalByUserAndStatus(requiredUser, InvoiceStatus.SENT);
+        long pendingInvoiceCount = invoiceRepository.countByUserAndStatus(requiredUser, InvoiceStatus.SENT);
+        long draftInvoiceCount = invoiceRepository.countByUserAndStatus(requiredUser, InvoiceStatus.DRAFT);
 
         return new DashboardSummaryDTO(
                 totalRevenue,
@@ -36,6 +37,13 @@ public class DashboardService {
 
     @Transactional(readOnly = true)
     public List<InvoiceEntity> getRecentInvoices(UserEntity user) {
-        return invoiceRepository.findTop5ByUserOrderByIssueDateDescCreatedAtDesc(user);
+        return invoiceRepository.findTop5ByUserOrderByIssueDateDescCreatedAtDesc(requireArgument(user, "user"));
+    }
+
+    private <T> T requireArgument(T value, String fieldName) {
+        if (value == null) {
+            throw new IllegalArgumentException(fieldName + " is required.");
+        }
+        return value;
     }
 }

@@ -2,20 +2,21 @@ package com.invoicingmanager.company;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.invoicingmanager.user.UserEntity;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Objects;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.invocation.Invocation;
 import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
@@ -33,7 +34,9 @@ class CompanyDetailsServiceTest {
     void getForUserReturnsExistingCompanyOrEmptyDetails() {
         UserEntity user = user(7L);
         CompanyDetailsEntity existing = company(user);
-        when(companyDetailsRepository.findByUser(user)).thenReturn(Optional.of(existing), Optional.empty());
+        when(companyDetailsRepository.findByUser(user))
+                .thenReturn(Optional.of(existing))
+                .thenReturn(Optional.empty());
 
         CompanyDetailsService service = service();
 
@@ -45,17 +48,62 @@ class CompanyDetailsServiceTest {
     void saveCreatesCompanyDetailsAndTrimsFields() {
         UserEntity user = user(7L);
         when(companyDetailsRepository.findByUser(user)).thenReturn(Optional.empty());
-        when(companyDetailsRepository.save(any(CompanyDetailsEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        CompanyDetailsEntity saved = service().save(dto(), null, user);
+        service().save(dto(), null, user);
 
-        assertThat(saved.getUser()).isSameAs(user);
-        assertThat(saved.getCompanyName()).isEqualTo("Acme Ltd");
-        assertThat(saved.getVatNumber()).isEqualTo("GB123");
+        CompanyDetailsEntity savedCompany = savedCompany();
+        assertThat(savedCompany.getUser()).isSameAs(user);
+        assertThat(savedCompany.getCompanyName()).isEqualTo("Acme Ltd");
+        assertThat(savedCompany.getVatNumber()).isEqualTo("GB123");
+        assertThat(savedCompany.getEmail()).isEqualTo("info@acme.test");
+    }
 
-        ArgumentCaptor<CompanyDetailsEntity> captor = ArgumentCaptor.forClass(CompanyDetailsEntity.class);
-        verify(companyDetailsRepository).save(captor.capture());
-        assertThat(captor.getValue().getEmail()).isEqualTo("info@acme.test");
+    @Test
+    void saveThrowsExceptionWhenDtoIsNull() {
+        UserEntity user = user(7L);
+
+        assertThatThrownBy(() -> service().save(null, null, user))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("company details is required");
+    }
+
+    @Test
+    void saveThrowsExceptionWhenUserIsNull() {
+        CompanyDetailsDTO dto = dto();
+
+        assertThatThrownBy(() -> service().save(dto, null, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("user is required");
+    }
+
+    @Test
+    void saveHandlesNullOptionalLogoGracefully() {
+        UserEntity user = user(7L);
+        when(companyDetailsRepository.findByUser(user)).thenReturn(Optional.empty());
+
+        service().save(dto(), null, user);
+
+        CompanyDetailsEntity savedCompany = savedCompany();
+        assertThat(savedCompany).isNotNull();
+        assertThat(savedCompany.getLogoFilename()).isNull();
+    }
+
+    @Test
+    void saveTrimsRequiredFieldsAndPreservesNullOptionalDtoFields() {
+        UserEntity user = user(7L);
+        CompanyDetailsDTO dto = dto();
+        dto.setVatNumber(null);
+        dto.setAddress(null);
+        when(companyDetailsRepository.findByUser(user)).thenReturn(Optional.empty());
+
+        service().save(dto, null, user);
+
+        CompanyDetailsEntity savedCompany = savedCompany();
+        assertThat(savedCompany.getCompanyName()).isEqualTo("Acme Ltd");
+        assertThat(savedCompany.getEmail()).isEqualTo("info@acme.test");
+        assertThat(savedCompany.getPhone()).isEqualTo("+441234");
+        assertThat(savedCompany.getVatNumber()).isNull();
+        assertThat(savedCompany.getAddress()).isNull();
     }
 
     @Test
@@ -69,7 +117,6 @@ class CompanyDetailsServiceTest {
                 "png-data".getBytes()
         );
         when(companyDetailsRepository.findByUser(user)).thenReturn(Optional.of(company));
-        when(companyDetailsRepository.save(company)).thenReturn(company);
 
         service().save(dto(), logo, user);
 
@@ -126,6 +173,22 @@ class CompanyDetailsServiceTest {
     }
 
     @Test
+    void requiredPublicMethodsRejectNullUser() {
+        assertThatThrownBy(() -> service().getForUser(null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("user is required");
+        assertThatThrownBy(() -> service().removeLogo(null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("user is required");
+        assertThatThrownBy(() -> service().getLogoResource(null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("user is required");
+        assertThatThrownBy(() -> service().getLogoContentType(null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("user is required");
+    }
+
+    @Test
     void toDTOCopiesCompanyDetails() {
         CompanyDetailsEntity company = company(user(7L));
         company.setCompanyName("Acme Ltd");
@@ -140,6 +203,13 @@ class CompanyDetailsServiceTest {
         assertThat(dto.getCompanyName()).isEqualTo("Acme Ltd");
         assertThat(dto.getVatNumber()).isEqualTo("GB123");
         assertThat(dto.isHasLogo()).isTrue();
+    }
+
+    @Test
+    void toDTOThrowsExceptionWhenCompanyIsNull() {
+        assertThatThrownBy(() -> service().toDTO(null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("company details is required");
     }
 
     @Test
@@ -181,5 +251,19 @@ class CompanyDetailsServiceTest {
         user.setId(id);
         user.setEmail("owner@example.com");
         return user;
+    }
+
+    private CompanyDetailsEntity savedCompany() {
+        return mockingDetails(companyDetailsRepository).getInvocations().stream()
+                .filter(invocation -> "save".equals(invocation.getMethod().getName()))
+                .findFirst()
+                .map(this::companyArgument)
+                .orElseThrow(() -> new AssertionError("Expected company details to be saved."));
+    }
+
+    private CompanyDetailsEntity companyArgument(Invocation invocation) {
+        Object argument = invocation.getArgument(0);
+        assertThat(argument).isInstanceOf(CompanyDetailsEntity.class);
+        return (CompanyDetailsEntity) Objects.requireNonNull(argument, "saved company must not be null");
     }
 }

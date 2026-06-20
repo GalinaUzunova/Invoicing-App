@@ -82,7 +82,7 @@ class InvoiceControllerTest {
     void newInvoiceFormIsAvailable() throws Exception {
         UserEntity user = new UserEntity();
         when(userService.getCurrentUser("owner@example.com")).thenReturn(user);
-        when(invoiceService.newInvoiceDTO(null)).thenReturn(new InvoiceDTO());
+        when(invoiceService.newInvoiceDTO(null, user)).thenReturn(new InvoiceDTO());
         when(customerService.findAllForUser(user)).thenReturn(List.of());
 
         mockMvc.perform(get("/invoices/new"))
