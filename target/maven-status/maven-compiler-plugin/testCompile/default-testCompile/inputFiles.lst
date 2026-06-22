@@ -7,12 +7,15 @@ C:\Users\gbuzu\Desktop\Invoicing manager\src\test\java\com\invoicingmanager\esti
 C:\Users\gbuzu\Desktop\Invoicing manager\src\test\java\com\invoicingmanager\estimate\EstimateControllerTest.java
 C:\Users\gbuzu\Desktop\Invoicing manager\src\test\java\com\invoicingmanager\estimate\EstimateEntityTest.java
 C:\Users\gbuzu\Desktop\Invoicing manager\src\test\java\com\invoicingmanager\estimate\EstimateServiceTest.java
+C:\Users\gbuzu\Desktop\Invoicing manager\src\test\java\com\invoicingmanager\integration\IntegrationTestDataSeeder.java
+C:\Users\gbuzu\Desktop\Invoicing manager\src\test\java\com\invoicingmanager\integration\MainPagesDataInitializationIntegrationTest.java
 C:\Users\gbuzu\Desktop\Invoicing manager\src\test\java\com\invoicingmanager\invoice\InvoiceCalculatorTest.java
 C:\Users\gbuzu\Desktop\Invoicing manager\src\test\java\com\invoicingmanager\invoice\InvoiceControllerTest.java
 C:\Users\gbuzu\Desktop\Invoicing manager\src\test\java\com\invoicingmanager\invoice\InvoiceEntityTest.java
 C:\Users\gbuzu\Desktop\Invoicing manager\src\test\java\com\invoicingmanager\invoice\InvoiceServiceTest.java
 C:\Users\gbuzu\Desktop\Invoicing manager\src\test\java\com\invoicingmanager\InvoicingManagerApplicationIntegrationTest.java
 C:\Users\gbuzu\Desktop\Invoicing manager\src\test\java\com\invoicingmanager\pdf\DocumentPdfServiceTest.java
+C:\Users\gbuzu\Desktop\Invoicing manager\src\test\java\com\invoicingmanager\pdf\PdfTemplateRenderingIntegrationTest.java
 C:\Users\gbuzu\Desktop\Invoicing manager\src\test\java\com\invoicingmanager\RequiredFieldsValidationTest.java
 C:\Users\gbuzu\Desktop\Invoicing manager\src\test\java\com\invoicingmanager\user\UserServiceTest.java
 C:\Users\gbuzu\Desktop\Invoicing manager\src\test\java\com\invoicingmanager\ValidationDateRuleTest.java

@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.invoicingmanager.integration.MainPagesDataInitializationIntegrationTest
+-------------------------------------------------------------------------------
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 9.553 s -- in com.invoicingmanager.integration.MainPagesDataInitializationIntegrationTest
