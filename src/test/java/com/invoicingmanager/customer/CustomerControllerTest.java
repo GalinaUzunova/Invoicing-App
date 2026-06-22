@@ -82,6 +82,15 @@ class CustomerControllerTest {
 
     @Test
     @WithMockUser(username = "owner@example.com")
+    void invalidCustomerIdShowsBadRequestErrorPage() throws Exception {
+        mockMvc.perform(get("/customers/not-a-number"))
+                .andExpect(status().isBadRequest())
+                .andExpect(view().name("error"))
+                .andExpect(model().attribute("statusCode", 400));
+    }
+
+    @Test
+    @WithMockUser(username = "owner@example.com")
     void missingCustomerShowsNotFoundErrorPage() throws Exception {
         UserEntity user = new UserEntity();
         when(userService.getCurrentUser("owner@example.com")).thenReturn(user);

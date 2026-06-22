@@ -93,6 +93,15 @@ class InvoiceControllerTest {
 
     @Test
     @WithMockUser(username = "owner@example.com")
+    void invalidInvoiceIdShowsBadRequestErrorPage() throws Exception {
+        mockMvc.perform(get("/invoices/not-a-number"))
+                .andExpect(status().isBadRequest())
+                .andExpect(view().name("error"))
+                .andExpect(model().attribute("statusCode", 400));
+    }
+
+    @Test
+    @WithMockUser(username = "owner@example.com")
     void detailIncludesInvoiceAndCompanyDetails() throws Exception {
         UserEntity user = new UserEntity();
         CustomerEntity customer = new CustomerEntity();

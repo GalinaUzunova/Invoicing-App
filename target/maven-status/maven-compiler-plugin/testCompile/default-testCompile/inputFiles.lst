@@ -7,6 +7,7 @@ C:\Users\gbuzu\Desktop\Invoicing manager\src\test\java\com\invoicingmanager\esti
 C:\Users\gbuzu\Desktop\Invoicing manager\src\test\java\com\invoicingmanager\estimate\EstimateControllerTest.java
 C:\Users\gbuzu\Desktop\Invoicing manager\src\test\java\com\invoicingmanager\estimate\EstimateEntityTest.java
 C:\Users\gbuzu\Desktop\Invoicing manager\src\test\java\com\invoicingmanager\estimate\EstimateServiceTest.java
+C:\Users\gbuzu\Desktop\Invoicing manager\src\test\java\com\invoicingmanager\GlobalExceptionHandlerTest.java
 C:\Users\gbuzu\Desktop\Invoicing manager\src\test\java\com\invoicingmanager\integration\IntegrationTestDataSeeder.java
 C:\Users\gbuzu\Desktop\Invoicing manager\src\test\java\com\invoicingmanager\integration\MainPagesDataInitializationIntegrationTest.java
 C:\Users\gbuzu\Desktop\Invoicing manager\src\test\java\com\invoicingmanager\invoice\InvoiceCalculatorTest.java
@@ -17,5 +18,6 @@ C:\Users\gbuzu\Desktop\Invoicing manager\src\test\java\com\invoicingmanager\Invo
 C:\Users\gbuzu\Desktop\Invoicing manager\src\test\java\com\invoicingmanager\pdf\DocumentPdfServiceTest.java
 C:\Users\gbuzu\Desktop\Invoicing manager\src\test\java\com\invoicingmanager\pdf\PdfTemplateRenderingIntegrationTest.java
 C:\Users\gbuzu\Desktop\Invoicing manager\src\test\java\com\invoicingmanager\RequiredFieldsValidationTest.java
+C:\Users\gbuzu\Desktop\Invoicing manager\src\test\java\com\invoicingmanager\user\AuthControllerTest.java
 C:\Users\gbuzu\Desktop\Invoicing manager\src\test\java\com\invoicingmanager\user\UserServiceTest.java
 C:\Users\gbuzu\Desktop\Invoicing manager\src\test\java\com\invoicingmanager\ValidationDateRuleTest.java
